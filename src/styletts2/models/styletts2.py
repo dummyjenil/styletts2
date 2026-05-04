@@ -51,18 +51,6 @@ class StyleTTS2Model(nn.Module):
             dropout=params.dropout,
         )
 
-        self.style_encoder = StyleEncoder(
-            dim_in=params.dim_in,
-            style_dim=params.style_dim,
-            max_conv_dim=params.hidden_dim,
-        )
-
-        self.predictor_encoder = StyleEncoder(
-            dim_in=params.dim_in,
-            style_dim=params.style_dim,
-            max_conv_dim=params.hidden_dim,
-        )
-
         # --- Decoder Selection ---
         if params.decoder.type == "istftnet":
             decoder_params = params.decoder.__dict__.copy()
@@ -84,6 +72,19 @@ class StyleTTS2Model(nn.Module):
                 resblock_dilation_sizes=params.decoder.resblock_dilation_sizes,
                 upsample_kernel_sizes=params.decoder.upsample_kernel_sizes,
             )
+
+
+        self.style_encoder = StyleEncoder(
+            dim_in=params.dim_in,
+            style_dim=params.style_dim,
+            max_conv_dim=params.hidden_dim,
+        )
+
+        self.predictor_encoder = StyleEncoder(
+            dim_in=params.dim_in,
+            style_dim=params.style_dim,
+            max_conv_dim=params.hidden_dim,
+        )
 
         # --- Diffusion Style Predictor ---
         diff_params = params.diffusion

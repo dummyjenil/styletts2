@@ -313,4 +313,55 @@ class StyleTTS2LightningModule(pl.LightningModule):
         return loss_dur / texts.size(0), loss_ce / texts.size(0)
 
     def validation_step(self, batch, batch_idx):
-        pass
+        (
+            texts,
+            input_lengths,
+            mels,
+            mel_input_length,
+            ref_mels,
+            _labels,
+            waves,
+        ) = batch
+
+        n_down = int(self.model.text_aligner.n_down)
+        mask = length_to_mask(mel_input_length // (2**n_down)).to(self.device)
+        text_mask = length_to_mask(input_lengths).to(self.device)
+
+        # Basic validation: compute mel reconstruction loss
+        with torch.no_grad():
+            # Styles
+            ref_ss = self.model.style_encoder(ref_mels.unsqueeze(1))
+            ref_sp = self.model.predictor_encoder(ref_mels.unsqueeze(1))
+            s_trg = torch.cat([ref_ss, ref_sp], dim=1)
+
+            # Encoders
+            t_en = self.model.text_encoder(texts, input_lengths, text_mask)
+            bert_dur = self.model.bert(texts, attention_mask=(~text_mask).int())
+            
+            # Predictor
+            # For validation we use ground truth alignment if available, or just skip complex parts
+            # Here we just want a proxy for convergence
+            _ppgs, s2s_pred, s2s_attn = self.model.text_aligner(mels, mask, texts)
+            s2s_attn = s2s_attn.transpose(-1, -2)[..., 1:].transpose(-1, -2)
+            mask_st = mask_from_lens(s2s_attn, input_lengths, mel_input_length // (2**n_down))
+            s2s_attn_mono = maximum_path(s2s_attn, mask_st)
+
+            # Reconstruct
+            en = (t_en @ s2s_attn_mono)
+            f0_fake, n_fake = self.model.predictor.f0_n_train(en, ref_sp)
+            y_rec = self.model.decoder(en, f0_fake, n_fake, ref_ss)
+
+            # Mel loss
+            # Handle varying wave lengths for validation
+            max_wave_len = max([w.shape[0] for w in waves])
+            padded_waves = []
+            for w in waves:
+                pad_w = np.pad(w, (0, max_wave_len - w.shape[0]))
+                padded_waves.append(pad_w)
+            
+            wave_tensor = torch.from_numpy(np.stack(padded_waves)).float().to(self.device).unsqueeze(1)
+            loss_mel = self.stft_loss(y_rec, wave_tensor)
+            
+            self.log("val/mel_loss", loss_mel, sync_dist=True, prog_bar=True)
+
+        return loss_mel
