@@ -125,7 +125,6 @@ class ASRConfig:
     input_dim: int = 80
     hidden_dim: int = 256
     n_token: int = 178
-    token_embedding_dim: int = 512
 
 
 @dataclass

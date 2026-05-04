@@ -14,7 +14,6 @@ external_models:
     input_dim: 80
     hidden_dim: 256
     n_token: 178
-    token_embedding_dim: 512
   plbert:
     vocab_size: 178
     hidden_size: 768
