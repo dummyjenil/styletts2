@@ -1,5 +1,3 @@
-/usr/local/lib/python3.12/dist-packages/torch/nn/utils/weight_norm.py:144: FutureWarning: `torch.nn.utils.weight_norm` is deprecated in favor of `torch.nn.utils.parametrizations.weight_norm`.
-  WeightNorm.apply(module, name, dim)
 StyleTTS2Model(
   (bert): CustomAlbert(
     (embeddings): AlbertEmbeddings(
@@ -43,7 +41,14 @@ StyleTTS2Model(
     (embedding): Embedding(178, 128)
     (cnn): ModuleList(
       (0-1): 2 x Sequential(
-        (0): Conv1d(128, 128, kernel_size=(5,), stride=(1,), padding=(2,))
+        (0): ParametrizedConv1d(
+          128, 128, kernel_size=(5,), stride=(1,), padding=(2,)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _WeightNorm()
+            )
+          )
+        )
         (1): LayerNorm()
         (2): LeakyReLU(negative_slope=0.2)
         (3): Dropout(p=0.2, inplace=False)
@@ -72,8 +77,22 @@ StyleTTS2Model(
     (F0): ModuleList(
       (0): AdainResBlk1d(
         (actv): LeakyReLU(negative_slope=0.2)
-        (conv1): Conv1d(128, 128, kernel_size=(3,), stride=(1,), padding=(1,))
-        (conv2): Conv1d(128, 128, kernel_size=(3,), stride=(1,), padding=(1,))
+        (conv1): ParametrizedConv1d(
+          128, 128, kernel_size=(3,), stride=(1,), padding=(1,)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _WeightNorm()
+            )
+          )
+        )
+        (conv2): ParametrizedConv1d(
+          128, 128, kernel_size=(3,), stride=(1,), padding=(1,)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _WeightNorm()
+            )
+          )
+        )
         (norm1): AdaIN1d(
           (norm): InstanceNorm1d(128, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
           (fc): Linear(in_features=128, out_features=256, bias=True)
@@ -87,8 +106,22 @@ StyleTTS2Model(
       )
       (1): AdainResBlk1d(
         (actv): LeakyReLU(negative_slope=0.2)
-        (conv1): Conv1d(128, 64, kernel_size=(3,), stride=(1,), padding=(1,))
-        (conv2): Conv1d(64, 64, kernel_size=(3,), stride=(1,), padding=(1,))
+        (conv1): ParametrizedConv1d(
+          128, 64, kernel_size=(3,), stride=(1,), padding=(1,)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _WeightNorm()
+            )
+          )
+        )
+        (conv2): ParametrizedConv1d(
+          64, 64, kernel_size=(3,), stride=(1,), padding=(1,)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _WeightNorm()
+            )
+          )
+        )
         (norm1): AdaIN1d(
           (norm): InstanceNorm1d(128, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
           (fc): Linear(in_features=128, out_features=256, bias=True)
@@ -97,14 +130,42 @@ StyleTTS2Model(
           (norm): InstanceNorm1d(64, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
           (fc): Linear(in_features=128, out_features=128, bias=True)
         )
-        (conv1x1): Conv1d(128, 64, kernel_size=(1,), stride=(1,), bias=False)
+        (conv1x1): ParametrizedConv1d(
+          128, 64, kernel_size=(1,), stride=(1,), bias=False
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _WeightNorm()
+            )
+          )
+        )
         (dropout): Dropout(p=0.2, inplace=False)
-        (pool): ConvTranspose1d(128, 128, kernel_size=(3,), stride=(2,), padding=(1,), output_padding=(1,), groups=128)
+        (pool): ParametrizedConvTranspose1d(
+          128, 128, kernel_size=(3,), stride=(2,), padding=(1,), output_padding=(1,), groups=128
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _WeightNorm()
+            )
+          )
+        )
       )
       (2): AdainResBlk1d(
         (actv): LeakyReLU(negative_slope=0.2)
-        (conv1): Conv1d(64, 64, kernel_size=(3,), stride=(1,), padding=(1,))
-        (conv2): Conv1d(64, 64, kernel_size=(3,), stride=(1,), padding=(1,))
+        (conv1): ParametrizedConv1d(
+          64, 64, kernel_size=(3,), stride=(1,), padding=(1,)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _WeightNorm()
+            )
+          )
+        )
+        (conv2): ParametrizedConv1d(
+          64, 64, kernel_size=(3,), stride=(1,), padding=(1,)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _WeightNorm()
+            )
+          )
+        )
         (norm1): AdaIN1d(
           (norm): InstanceNorm1d(64, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
           (fc): Linear(in_features=128, out_features=128, bias=True)
@@ -120,8 +181,22 @@ StyleTTS2Model(
     (N): ModuleList(
       (0): AdainResBlk1d(
         (actv): LeakyReLU(negative_slope=0.2)
-        (conv1): Conv1d(128, 128, kernel_size=(3,), stride=(1,), padding=(1,))
-        (conv2): Conv1d(128, 128, kernel_size=(3,), stride=(1,), padding=(1,))
+        (conv1): ParametrizedConv1d(
+          128, 128, kernel_size=(3,), stride=(1,), padding=(1,)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _WeightNorm()
+            )
+          )
+        )
+        (conv2): ParametrizedConv1d(
+          128, 128, kernel_size=(3,), stride=(1,), padding=(1,)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _WeightNorm()
+            )
+          )
+        )
         (norm1): AdaIN1d(
           (norm): InstanceNorm1d(128, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
           (fc): Linear(in_features=128, out_features=256, bias=True)
@@ -135,8 +210,22 @@ StyleTTS2Model(
       )
       (1): AdainResBlk1d(
         (actv): LeakyReLU(negative_slope=0.2)
-        (conv1): Conv1d(128, 64, kernel_size=(3,), stride=(1,), padding=(1,))
-        (conv2): Conv1d(64, 64, kernel_size=(3,), stride=(1,), padding=(1,))
+        (conv1): ParametrizedConv1d(
+          128, 64, kernel_size=(3,), stride=(1,), padding=(1,)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _WeightNorm()
+            )
+          )
+        )
+        (conv2): ParametrizedConv1d(
+          64, 64, kernel_size=(3,), stride=(1,), padding=(1,)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _WeightNorm()
+            )
+          )
+        )
         (norm1): AdaIN1d(
           (norm): InstanceNorm1d(128, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
           (fc): Linear(in_features=128, out_features=256, bias=True)
@@ -145,14 +234,42 @@ StyleTTS2Model(
           (norm): InstanceNorm1d(64, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
           (fc): Linear(in_features=128, out_features=128, bias=True)
         )
-        (conv1x1): Conv1d(128, 64, kernel_size=(1,), stride=(1,), bias=False)
+        (conv1x1): ParametrizedConv1d(
+          128, 64, kernel_size=(1,), stride=(1,), bias=False
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _WeightNorm()
+            )
+          )
+        )
         (dropout): Dropout(p=0.2, inplace=False)
-        (pool): ConvTranspose1d(128, 128, kernel_size=(3,), stride=(2,), padding=(1,), output_padding=(1,), groups=128)
+        (pool): ParametrizedConvTranspose1d(
+          128, 128, kernel_size=(3,), stride=(2,), padding=(1,), output_padding=(1,), groups=128
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _WeightNorm()
+            )
+          )
+        )
       )
       (2): AdainResBlk1d(
         (actv): LeakyReLU(negative_slope=0.2)
-        (conv1): Conv1d(64, 64, kernel_size=(3,), stride=(1,), padding=(1,))
-        (conv2): Conv1d(64, 64, kernel_size=(3,), stride=(1,), padding=(1,))
+        (conv1): ParametrizedConv1d(
+          64, 64, kernel_size=(3,), stride=(1,), padding=(1,)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _WeightNorm()
+            )
+          )
+        )
+        (conv2): ParametrizedConv1d(
+          64, 64, kernel_size=(3,), stride=(1,), padding=(1,)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _WeightNorm()
+            )
+          )
+        )
         (norm1): AdaIN1d(
           (norm): InstanceNorm1d(64, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
           (fc): Linear(in_features=128, out_features=128, bias=True)
@@ -170,46 +287,151 @@ StyleTTS2Model(
   )
   (style_encoder): StyleEncoder(
     (shared): Sequential(
-      (0): Conv2d(1, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      (0): ParametrizedConv2d(
+        1, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)
+        (parametrizations): ModuleDict(
+          (weight): ParametrizationList(
+            (0): _SpectralNorm()
+          )
+        )
+      )
       (1): ResBlk(
         (actv): LeakyReLU(negative_slope=0.2)
         (downsample): DownSample()
         (downsample_res): LearnedDownSample(
-          (conv): Conv2d(64, 64, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), groups=64)
+          (conv): ParametrizedConv2d(
+            64, 64, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), groups=64
+            (parametrizations): ModuleDict(
+              (weight): ParametrizationList(
+                (0): _SpectralNorm()
+              )
+            )
+          )
         )
-        (conv1): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-        (conv2): Conv2d(64, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-        (conv1x1): Conv2d(64, 128, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (conv1): ParametrizedConv2d(
+          64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _SpectralNorm()
+            )
+          )
+        )
+        (conv2): ParametrizedConv2d(
+          64, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _SpectralNorm()
+            )
+          )
+        )
+        (conv1x1): ParametrizedConv2d(
+          64, 128, kernel_size=(1, 1), stride=(1, 1), bias=False
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _SpectralNorm()
+            )
+          )
+        )
       )
       (2): ResBlk(
         (actv): LeakyReLU(negative_slope=0.2)
         (downsample): DownSample()
         (downsample_res): LearnedDownSample(
-          (conv): Conv2d(128, 128, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), groups=128)
+          (conv): ParametrizedConv2d(
+            128, 128, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), groups=128
+            (parametrizations): ModuleDict(
+              (weight): ParametrizationList(
+                (0): _SpectralNorm()
+              )
+            )
+          )
         )
-        (conv1): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-        (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (conv1): ParametrizedConv2d(
+          128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _SpectralNorm()
+            )
+          )
+        )
+        (conv2): ParametrizedConv2d(
+          128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _SpectralNorm()
+            )
+          )
+        )
       )
       (3): ResBlk(
         (actv): LeakyReLU(negative_slope=0.2)
         (downsample): DownSample()
         (downsample_res): LearnedDownSample(
-          (conv): Conv2d(128, 128, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), groups=128)
+          (conv): ParametrizedConv2d(
+            128, 128, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), groups=128
+            (parametrizations): ModuleDict(
+              (weight): ParametrizationList(
+                (0): _SpectralNorm()
+              )
+            )
+          )
         )
-        (conv1): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-        (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (conv1): ParametrizedConv2d(
+          128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _SpectralNorm()
+            )
+          )
+        )
+        (conv2): ParametrizedConv2d(
+          128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _SpectralNorm()
+            )
+          )
+        )
       )
       (4): ResBlk(
         (actv): LeakyReLU(negative_slope=0.2)
         (downsample): DownSample()
         (downsample_res): LearnedDownSample(
-          (conv): Conv2d(128, 128, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), groups=128)
+          (conv): ParametrizedConv2d(
+            128, 128, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), groups=128
+            (parametrizations): ModuleDict(
+              (weight): ParametrizationList(
+                (0): _SpectralNorm()
+              )
+            )
+          )
         )
-        (conv1): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-        (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (conv1): ParametrizedConv2d(
+          128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _SpectralNorm()
+            )
+          )
+        )
+        (conv2): ParametrizedConv2d(
+          128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _SpectralNorm()
+            )
+          )
+        )
       )
       (5): LeakyReLU(negative_slope=0.2)
-      (6): Conv2d(128, 128, kernel_size=(5, 5), stride=(1, 1))
+      (6): ParametrizedConv2d(
+        128, 128, kernel_size=(5, 5), stride=(1, 1)
+        (parametrizations): ModuleDict(
+          (weight): ParametrizationList(
+            (0): _SpectralNorm()
+          )
+        )
+      )
       (7): AdaptiveAvgPool2d(output_size=1)
       (8): LeakyReLU(negative_slope=0.2)
     )
@@ -217,46 +439,151 @@ StyleTTS2Model(
   )
   (predictor_encoder): StyleEncoder(
     (shared): Sequential(
-      (0): Conv2d(1, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      (0): ParametrizedConv2d(
+        1, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)
+        (parametrizations): ModuleDict(
+          (weight): ParametrizationList(
+            (0): _SpectralNorm()
+          )
+        )
+      )
       (1): ResBlk(
         (actv): LeakyReLU(negative_slope=0.2)
         (downsample): DownSample()
         (downsample_res): LearnedDownSample(
-          (conv): Conv2d(64, 64, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), groups=64)
+          (conv): ParametrizedConv2d(
+            64, 64, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), groups=64
+            (parametrizations): ModuleDict(
+              (weight): ParametrizationList(
+                (0): _SpectralNorm()
+              )
+            )
+          )
         )
-        (conv1): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-        (conv2): Conv2d(64, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-        (conv1x1): Conv2d(64, 128, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (conv1): ParametrizedConv2d(
+          64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _SpectralNorm()
+            )
+          )
+        )
+        (conv2): ParametrizedConv2d(
+          64, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _SpectralNorm()
+            )
+          )
+        )
+        (conv1x1): ParametrizedConv2d(
+          64, 128, kernel_size=(1, 1), stride=(1, 1), bias=False
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _SpectralNorm()
+            )
+          )
+        )
       )
       (2): ResBlk(
         (actv): LeakyReLU(negative_slope=0.2)
         (downsample): DownSample()
         (downsample_res): LearnedDownSample(
-          (conv): Conv2d(128, 128, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), groups=128)
+          (conv): ParametrizedConv2d(
+            128, 128, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), groups=128
+            (parametrizations): ModuleDict(
+              (weight): ParametrizationList(
+                (0): _SpectralNorm()
+              )
+            )
+          )
         )
-        (conv1): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-        (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (conv1): ParametrizedConv2d(
+          128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _SpectralNorm()
+            )
+          )
+        )
+        (conv2): ParametrizedConv2d(
+          128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _SpectralNorm()
+            )
+          )
+        )
       )
       (3): ResBlk(
         (actv): LeakyReLU(negative_slope=0.2)
         (downsample): DownSample()
         (downsample_res): LearnedDownSample(
-          (conv): Conv2d(128, 128, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), groups=128)
+          (conv): ParametrizedConv2d(
+            128, 128, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), groups=128
+            (parametrizations): ModuleDict(
+              (weight): ParametrizationList(
+                (0): _SpectralNorm()
+              )
+            )
+          )
         )
-        (conv1): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-        (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (conv1): ParametrizedConv2d(
+          128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _SpectralNorm()
+            )
+          )
+        )
+        (conv2): ParametrizedConv2d(
+          128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _SpectralNorm()
+            )
+          )
+        )
       )
       (4): ResBlk(
         (actv): LeakyReLU(negative_slope=0.2)
         (downsample): DownSample()
         (downsample_res): LearnedDownSample(
-          (conv): Conv2d(128, 128, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), groups=128)
+          (conv): ParametrizedConv2d(
+            128, 128, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), groups=128
+            (parametrizations): ModuleDict(
+              (weight): ParametrizationList(
+                (0): _SpectralNorm()
+              )
+            )
+          )
         )
-        (conv1): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-        (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (conv1): ParametrizedConv2d(
+          128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _SpectralNorm()
+            )
+          )
+        )
+        (conv2): ParametrizedConv2d(
+          128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _SpectralNorm()
+            )
+          )
+        )
       )
       (5): LeakyReLU(negative_slope=0.2)
-      (6): Conv2d(128, 128, kernel_size=(5, 5), stride=(1, 1))
+      (6): ParametrizedConv2d(
+        128, 128, kernel_size=(5, 5), stride=(1, 1)
+        (parametrizations): ModuleDict(
+          (weight): ParametrizationList(
+            (0): _SpectralNorm()
+          )
+        )
+      )
       (7): AdaptiveAvgPool2d(output_size=1)
       (8): LeakyReLU(negative_slope=0.2)
     )
@@ -266,8 +593,22 @@ StyleTTS2Model(
     (encode): AdainResBlk1d(
       (actv): LeakyReLU(negative_slope=0.2)
       (dropout): Dropout(p=0.0, inplace=False)
-      (conv1): Conv1d(130, 1024, kernel_size=(3,), stride=(1,), padding=(1,))
-      (conv2): Conv1d(1024, 1024, kernel_size=(3,), stride=(1,), padding=(1,))
+      (conv1): ParametrizedConv1d(
+        130, 1024, kernel_size=(3,), stride=(1,), padding=(1,)
+        (parametrizations): ModuleDict(
+          (weight): ParametrizationList(
+            (0): _WeightNorm()
+          )
+        )
+      )
+      (conv2): ParametrizedConv1d(
+        1024, 1024, kernel_size=(3,), stride=(1,), padding=(1,)
+        (parametrizations): ModuleDict(
+          (weight): ParametrizationList(
+            (0): _WeightNorm()
+          )
+        )
+      )
       (norm1): AdaIN1d(
         (norm): InstanceNorm1d(130, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
         (fc): Linear(in_features=128, out_features=260, bias=True)
@@ -276,15 +617,36 @@ StyleTTS2Model(
         (norm): InstanceNorm1d(1024, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
         (fc): Linear(in_features=128, out_features=2048, bias=True)
       )
-      (conv1x1): Conv1d(130, 1024, kernel_size=(1,), stride=(1,), bias=False)
+      (conv1x1): ParametrizedConv1d(
+        130, 1024, kernel_size=(1,), stride=(1,), bias=False
+        (parametrizations): ModuleDict(
+          (weight): ParametrizationList(
+            (0): _WeightNorm()
+          )
+        )
+      )
       (pool): Identity()
     )
     (decode): ModuleList(
       (0-2): 3 x AdainResBlk1d(
         (actv): LeakyReLU(negative_slope=0.2)
         (dropout): Dropout(p=0.0, inplace=False)
-        (conv1): Conv1d(1090, 1024, kernel_size=(3,), stride=(1,), padding=(1,))
-        (conv2): Conv1d(1024, 1024, kernel_size=(3,), stride=(1,), padding=(1,))
+        (conv1): ParametrizedConv1d(
+          1090, 1024, kernel_size=(3,), stride=(1,), padding=(1,)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _WeightNorm()
+            )
+          )
+        )
+        (conv2): ParametrizedConv1d(
+          1024, 1024, kernel_size=(3,), stride=(1,), padding=(1,)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _WeightNorm()
+            )
+          )
+        )
         (norm1): AdaIN1d(
           (norm): InstanceNorm1d(1090, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
           (fc): Linear(in_features=128, out_features=2180, bias=True)
@@ -293,14 +655,35 @@ StyleTTS2Model(
           (norm): InstanceNorm1d(1024, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
           (fc): Linear(in_features=128, out_features=2048, bias=True)
         )
-        (conv1x1): Conv1d(1090, 1024, kernel_size=(1,), stride=(1,), bias=False)
+        (conv1x1): ParametrizedConv1d(
+          1090, 1024, kernel_size=(1,), stride=(1,), bias=False
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _WeightNorm()
+            )
+          )
+        )
         (pool): Identity()
       )
       (3): AdainResBlk1d(
         (actv): LeakyReLU(negative_slope=0.2)
         (dropout): Dropout(p=0.0, inplace=False)
-        (conv1): Conv1d(1090, 512, kernel_size=(3,), stride=(1,), padding=(1,))
-        (conv2): Conv1d(512, 512, kernel_size=(3,), stride=(1,), padding=(1,))
+        (conv1): ParametrizedConv1d(
+          1090, 512, kernel_size=(3,), stride=(1,), padding=(1,)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _WeightNorm()
+            )
+          )
+        )
+        (conv2): ParametrizedConv1d(
+          512, 512, kernel_size=(3,), stride=(1,), padding=(1,)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _WeightNorm()
+            )
+          )
+        )
         (norm1): AdaIN1d(
           (norm): InstanceNorm1d(1090, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
           (fc): Linear(in_features=128, out_features=2180, bias=True)
@@ -309,14 +692,49 @@ StyleTTS2Model(
           (norm): InstanceNorm1d(512, eps=1e-05, momentum=0.1, affine=False, track_running_stats=False)
           (fc): Linear(in_features=128, out_features=1024, bias=True)
         )
-        (conv1x1): Conv1d(1090, 512, kernel_size=(1,), stride=(1,), bias=False)
-        (pool): ConvTranspose1d(1090, 1090, kernel_size=(3,), stride=(2,), padding=(1,), output_padding=(1,), groups=1090)
+        (conv1x1): ParametrizedConv1d(
+          1090, 512, kernel_size=(1,), stride=(1,), bias=False
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _WeightNorm()
+            )
+          )
+        )
+        (pool): ParametrizedConvTranspose1d(
+          1090, 1090, kernel_size=(3,), stride=(2,), padding=(1,), output_padding=(1,), groups=1090
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _WeightNorm()
+            )
+          )
+        )
       )
     )
-    (F0_conv): Conv1d(1, 1, kernel_size=(3,), stride=(2,), padding=(1,))
-    (N_conv): Conv1d(1, 1, kernel_size=(3,), stride=(2,), padding=(1,))
+    (F0_conv): ParametrizedConv1d(
+      1, 1, kernel_size=(3,), stride=(2,), padding=(1,)
+      (parametrizations): ModuleDict(
+        (weight): ParametrizationList(
+          (0): _WeightNorm()
+        )
+      )
+    )
+    (N_conv): ParametrizedConv1d(
+      1, 1, kernel_size=(3,), stride=(2,), padding=(1,)
+      (parametrizations): ModuleDict(
+        (weight): ParametrizationList(
+          (0): _WeightNorm()
+        )
+      )
+    )
     (asr_res): Sequential(
-      (0): Conv1d(512, 64, kernel_size=(1,), stride=(1,))
+      (0): ParametrizedConv1d(
+        512, 64, kernel_size=(1,), stride=(1,)
+        (parametrizations): ModuleDict(
+          (weight): ParametrizationList(
+            (0): _WeightNorm()
+          )
+        )
+      )
     )
     (generator): Generator(
       (m_source): SourceModuleHnNSF(
@@ -326,18 +744,60 @@ StyleTTS2Model(
       )
       (f0_upsamp): Upsample(scale_factor=300.0, mode='nearest')
       (ups): ModuleList(
-        (0): ConvTranspose1d(128, 64, kernel_size=(20,), stride=(10,), padding=(5,))
-        (1): ConvTranspose1d(64, 32, kernel_size=(12,), stride=(6,), padding=(3,))
+        (0): ParametrizedConvTranspose1d(
+          128, 64, kernel_size=(20,), stride=(10,), padding=(5,)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _WeightNorm()
+            )
+          )
+        )
+        (1): ParametrizedConvTranspose1d(
+          64, 32, kernel_size=(12,), stride=(6,), padding=(3,)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _WeightNorm()
+            )
+          )
+        )
       )
       (resblocks): ModuleList(
         (0): AdaINResBlock(
           (convs1): ModuleList(
-            (0): Conv1d(64, 64, kernel_size=(3,), stride=(1,), padding=(1,))
-            (1): Conv1d(64, 64, kernel_size=(3,), stride=(1,), padding=(3,), dilation=(3,))
-            (2): Conv1d(64, 64, kernel_size=(3,), stride=(1,), padding=(5,), dilation=(5,))
+            (0): ParametrizedConv1d(
+              64, 64, kernel_size=(3,), stride=(1,), padding=(1,)
+              (parametrizations): ModuleDict(
+                (weight): ParametrizationList(
+                  (0): _WeightNorm()
+                )
+              )
+            )
+            (1): ParametrizedConv1d(
+              64, 64, kernel_size=(3,), stride=(1,), padding=(3,), dilation=(3,)
+              (parametrizations): ModuleDict(
+                (weight): ParametrizationList(
+                  (0): _WeightNorm()
+                )
+              )
+            )
+            (2): ParametrizedConv1d(
+              64, 64, kernel_size=(3,), stride=(1,), padding=(5,), dilation=(5,)
+              (parametrizations): ModuleDict(
+                (weight): ParametrizationList(
+                  (0): _WeightNorm()
+                )
+              )
+            )
           )
           (convs2): ModuleList(
-            (0-2): 3 x Conv1d(64, 64, kernel_size=(3,), stride=(1,), padding=(1,))
+            (0-2): 3 x ParametrizedConv1d(
+              64, 64, kernel_size=(3,), stride=(1,), padding=(1,)
+              (parametrizations): ModuleDict(
+                (weight): ParametrizationList(
+                  (0): _WeightNorm()
+                )
+              )
+            )
           )
           (adain1): ModuleList(
             (0-2): 3 x AdaIN1d(
@@ -364,12 +824,40 @@ StyleTTS2Model(
         )
         (1): AdaINResBlock(
           (convs1): ModuleList(
-            (0): Conv1d(64, 64, kernel_size=(7,), stride=(1,), padding=(3,))
-            (1): Conv1d(64, 64, kernel_size=(7,), stride=(1,), padding=(9,), dilation=(3,))
-            (2): Conv1d(64, 64, kernel_size=(7,), stride=(1,), padding=(15,), dilation=(5,))
+            (0): ParametrizedConv1d(
+              64, 64, kernel_size=(7,), stride=(1,), padding=(3,)
+              (parametrizations): ModuleDict(
+                (weight): ParametrizationList(
+                  (0): _WeightNorm()
+                )
+              )
+            )
+            (1): ParametrizedConv1d(
+              64, 64, kernel_size=(7,), stride=(1,), padding=(9,), dilation=(3,)
+              (parametrizations): ModuleDict(
+                (weight): ParametrizationList(
+                  (0): _WeightNorm()
+                )
+              )
+            )
+            (2): ParametrizedConv1d(
+              64, 64, kernel_size=(7,), stride=(1,), padding=(15,), dilation=(5,)
+              (parametrizations): ModuleDict(
+                (weight): ParametrizationList(
+                  (0): _WeightNorm()
+                )
+              )
+            )
           )
           (convs2): ModuleList(
-            (0-2): 3 x Conv1d(64, 64, kernel_size=(7,), stride=(1,), padding=(3,))
+            (0-2): 3 x ParametrizedConv1d(
+              64, 64, kernel_size=(7,), stride=(1,), padding=(3,)
+              (parametrizations): ModuleDict(
+                (weight): ParametrizationList(
+                  (0): _WeightNorm()
+                )
+              )
+            )
           )
           (adain1): ModuleList(
             (0-2): 3 x AdaIN1d(
@@ -396,12 +884,40 @@ StyleTTS2Model(
         )
         (2): AdaINResBlock(
           (convs1): ModuleList(
-            (0): Conv1d(32, 32, kernel_size=(3,), stride=(1,), padding=(1,))
-            (1): Conv1d(32, 32, kernel_size=(3,), stride=(1,), padding=(3,), dilation=(3,))
-            (2): Conv1d(32, 32, kernel_size=(3,), stride=(1,), padding=(5,), dilation=(5,))
+            (0): ParametrizedConv1d(
+              32, 32, kernel_size=(3,), stride=(1,), padding=(1,)
+              (parametrizations): ModuleDict(
+                (weight): ParametrizationList(
+                  (0): _WeightNorm()
+                )
+              )
+            )
+            (1): ParametrizedConv1d(
+              32, 32, kernel_size=(3,), stride=(1,), padding=(3,), dilation=(3,)
+              (parametrizations): ModuleDict(
+                (weight): ParametrizationList(
+                  (0): _WeightNorm()
+                )
+              )
+            )
+            (2): ParametrizedConv1d(
+              32, 32, kernel_size=(3,), stride=(1,), padding=(5,), dilation=(5,)
+              (parametrizations): ModuleDict(
+                (weight): ParametrizationList(
+                  (0): _WeightNorm()
+                )
+              )
+            )
           )
           (convs2): ModuleList(
-            (0-2): 3 x Conv1d(32, 32, kernel_size=(3,), stride=(1,), padding=(1,))
+            (0-2): 3 x ParametrizedConv1d(
+              32, 32, kernel_size=(3,), stride=(1,), padding=(1,)
+              (parametrizations): ModuleDict(
+                (weight): ParametrizationList(
+                  (0): _WeightNorm()
+                )
+              )
+            )
           )
           (adain1): ModuleList(
             (0-2): 3 x AdaIN1d(
@@ -428,12 +944,40 @@ StyleTTS2Model(
         )
         (3): AdaINResBlock(
           (convs1): ModuleList(
-            (0): Conv1d(32, 32, kernel_size=(7,), stride=(1,), padding=(3,))
-            (1): Conv1d(32, 32, kernel_size=(7,), stride=(1,), padding=(9,), dilation=(3,))
-            (2): Conv1d(32, 32, kernel_size=(7,), stride=(1,), padding=(15,), dilation=(5,))
+            (0): ParametrizedConv1d(
+              32, 32, kernel_size=(7,), stride=(1,), padding=(3,)
+              (parametrizations): ModuleDict(
+                (weight): ParametrizationList(
+                  (0): _WeightNorm()
+                )
+              )
+            )
+            (1): ParametrizedConv1d(
+              32, 32, kernel_size=(7,), stride=(1,), padding=(9,), dilation=(3,)
+              (parametrizations): ModuleDict(
+                (weight): ParametrizationList(
+                  (0): _WeightNorm()
+                )
+              )
+            )
+            (2): ParametrizedConv1d(
+              32, 32, kernel_size=(7,), stride=(1,), padding=(15,), dilation=(5,)
+              (parametrizations): ModuleDict(
+                (weight): ParametrizationList(
+                  (0): _WeightNorm()
+                )
+              )
+            )
           )
           (convs2): ModuleList(
-            (0-2): 3 x Conv1d(32, 32, kernel_size=(7,), stride=(1,), padding=(3,))
+            (0-2): 3 x ParametrizedConv1d(
+              32, 32, kernel_size=(7,), stride=(1,), padding=(3,)
+              (parametrizations): ModuleDict(
+                (weight): ParametrizationList(
+                  (0): _WeightNorm()
+                )
+              )
+            )
           )
           (adain1): ModuleList(
             (0-2): 3 x AdaIN1d(
@@ -466,12 +1010,40 @@ StyleTTS2Model(
       (noise_res): ModuleList(
         (0): AdaINResBlock(
           (convs1): ModuleList(
-            (0): Conv1d(64, 64, kernel_size=(7,), stride=(1,), padding=(3,))
-            (1): Conv1d(64, 64, kernel_size=(7,), stride=(1,), padding=(9,), dilation=(3,))
-            (2): Conv1d(64, 64, kernel_size=(7,), stride=(1,), padding=(15,), dilation=(5,))
+            (0): ParametrizedConv1d(
+              64, 64, kernel_size=(7,), stride=(1,), padding=(3,)
+              (parametrizations): ModuleDict(
+                (weight): ParametrizationList(
+                  (0): _WeightNorm()
+                )
+              )
+            )
+            (1): ParametrizedConv1d(
+              64, 64, kernel_size=(7,), stride=(1,), padding=(9,), dilation=(3,)
+              (parametrizations): ModuleDict(
+                (weight): ParametrizationList(
+                  (0): _WeightNorm()
+                )
+              )
+            )
+            (2): ParametrizedConv1d(
+              64, 64, kernel_size=(7,), stride=(1,), padding=(15,), dilation=(5,)
+              (parametrizations): ModuleDict(
+                (weight): ParametrizationList(
+                  (0): _WeightNorm()
+                )
+              )
+            )
           )
           (convs2): ModuleList(
-            (0-2): 3 x Conv1d(64, 64, kernel_size=(7,), stride=(1,), padding=(3,))
+            (0-2): 3 x ParametrizedConv1d(
+              64, 64, kernel_size=(7,), stride=(1,), padding=(3,)
+              (parametrizations): ModuleDict(
+                (weight): ParametrizationList(
+                  (0): _WeightNorm()
+                )
+              )
+            )
           )
           (adain1): ModuleList(
             (0-2): 3 x AdaIN1d(
@@ -498,12 +1070,40 @@ StyleTTS2Model(
         )
         (1): AdaINResBlock(
           (convs1): ModuleList(
-            (0): Conv1d(32, 32, kernel_size=(11,), stride=(1,), padding=(5,))
-            (1): Conv1d(32, 32, kernel_size=(11,), stride=(1,), padding=(15,), dilation=(3,))
-            (2): Conv1d(32, 32, kernel_size=(11,), stride=(1,), padding=(25,), dilation=(5,))
+            (0): ParametrizedConv1d(
+              32, 32, kernel_size=(11,), stride=(1,), padding=(5,)
+              (parametrizations): ModuleDict(
+                (weight): ParametrizationList(
+                  (0): _WeightNorm()
+                )
+              )
+            )
+            (1): ParametrizedConv1d(
+              32, 32, kernel_size=(11,), stride=(1,), padding=(15,), dilation=(3,)
+              (parametrizations): ModuleDict(
+                (weight): ParametrizationList(
+                  (0): _WeightNorm()
+                )
+              )
+            )
+            (2): ParametrizedConv1d(
+              32, 32, kernel_size=(11,), stride=(1,), padding=(25,), dilation=(5,)
+              (parametrizations): ModuleDict(
+                (weight): ParametrizationList(
+                  (0): _WeightNorm()
+                )
+              )
+            )
           )
           (convs2): ModuleList(
-            (0-2): 3 x Conv1d(32, 32, kernel_size=(11,), stride=(1,), padding=(5,))
+            (0-2): 3 x ParametrizedConv1d(
+              32, 32, kernel_size=(11,), stride=(1,), padding=(5,)
+              (parametrizations): ModuleDict(
+                (weight): ParametrizationList(
+                  (0): _WeightNorm()
+                )
+              )
+            )
           )
           (adain1): ModuleList(
             (0-2): 3 x AdaIN1d(
@@ -529,7 +1129,14 @@ StyleTTS2Model(
           )
         )
       )
-      (conv_post): Conv1d(32, 22, kernel_size=(7,), stride=(1,), padding=(3,))
+      (conv_post): ParametrizedConv1d(
+        32, 22, kernel_size=(7,), stride=(1,), padding=(3,)
+        (parametrizations): ModuleDict(
+          (weight): ParametrizationList(
+            (0): _WeightNorm()
+          )
+        )
+      )
       (reflection_pad): ReflectionPad1d((1, 0))
       (stft): CustomSTFT()
     )
@@ -696,13 +1303,55 @@ StyleTTS2Model(
     (discriminators): ModuleList(
       (0-4): 5 x DiscriminatorP(
         (convs): ModuleList(
-          (0): Conv2d(1, 32, kernel_size=(5, 1), stride=(3, 1), padding=(2, 0))
-          (1): Conv2d(32, 128, kernel_size=(5, 1), stride=(3, 1), padding=(2, 0))
-          (2): Conv2d(128, 512, kernel_size=(5, 1), stride=(3, 1), padding=(2, 0))
-          (3): Conv2d(512, 1024, kernel_size=(5, 1), stride=(3, 1), padding=(2, 0))
-          (4): Conv2d(1024, 1024, kernel_size=(5, 1), stride=(1, 1), padding=(2, 0))
+          (0): ParametrizedConv2d(
+            1, 32, kernel_size=(5, 1), stride=(3, 1), padding=(2, 0)
+            (parametrizations): ModuleDict(
+              (weight): ParametrizationList(
+                (0): _WeightNorm()
+              )
+            )
+          )
+          (1): ParametrizedConv2d(
+            32, 128, kernel_size=(5, 1), stride=(3, 1), padding=(2, 0)
+            (parametrizations): ModuleDict(
+              (weight): ParametrizationList(
+                (0): _WeightNorm()
+              )
+            )
+          )
+          (2): ParametrizedConv2d(
+            128, 512, kernel_size=(5, 1), stride=(3, 1), padding=(2, 0)
+            (parametrizations): ModuleDict(
+              (weight): ParametrizationList(
+                (0): _WeightNorm()
+              )
+            )
+          )
+          (3): ParametrizedConv2d(
+            512, 1024, kernel_size=(5, 1), stride=(3, 1), padding=(2, 0)
+            (parametrizations): ModuleDict(
+              (weight): ParametrizationList(
+                (0): _WeightNorm()
+              )
+            )
+          )
+          (4): ParametrizedConv2d(
+            1024, 1024, kernel_size=(5, 1), stride=(1, 1), padding=(2, 0)
+            (parametrizations): ModuleDict(
+              (weight): ParametrizationList(
+                (0): _WeightNorm()
+              )
+            )
+          )
         )
-        (conv_post): Conv2d(1024, 1, kernel_size=(3, 1), stride=(1, 1), padding=(1, 0))
+        (conv_post): ParametrizedConv2d(
+          1024, 1, kernel_size=(3, 1), stride=(1, 1), padding=(1, 0)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _WeightNorm()
+            )
+          )
+        )
       )
     )
   )
@@ -710,21 +1359,84 @@ StyleTTS2Model(
     (discriminators): ModuleList(
       (0-2): 3 x SpecDiscriminator(
         (discriminators): ModuleList(
-          (0): Conv2d(1, 32, kernel_size=(3, 9), stride=(1, 1), padding=(1, 4))
-          (1-3): 3 x Conv2d(32, 32, kernel_size=(3, 9), stride=(1, 2), padding=(1, 4))
-          (4): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+          (0): ParametrizedConv2d(
+            1, 32, kernel_size=(3, 9), stride=(1, 1), padding=(1, 4)
+            (parametrizations): ModuleDict(
+              (weight): ParametrizationList(
+                (0): _WeightNorm()
+              )
+            )
+          )
+          (1-3): 3 x ParametrizedConv2d(
+            32, 32, kernel_size=(3, 9), stride=(1, 2), padding=(1, 4)
+            (parametrizations): ModuleDict(
+              (weight): ParametrizationList(
+                (0): _WeightNorm()
+              )
+            )
+          )
+          (4): ParametrizedConv2d(
+            32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)
+            (parametrizations): ModuleDict(
+              (weight): ParametrizationList(
+                (0): _WeightNorm()
+              )
+            )
+          )
         )
-        (out): Conv2d(32, 1, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (out): ParametrizedConv2d(
+          32, 1, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)
+          (parametrizations): ModuleDict(
+            (weight): ParametrizationList(
+              (0): _WeightNorm()
+            )
+          )
+        )
       )
     )
   )
   (wd): WavLMDiscriminator(
-    (pre): Conv1d(9984, 64, kernel_size=(1,), stride=(1,))
-    (convs): ModuleList(
-      (0): Conv1d(64, 128, kernel_size=(5,), stride=(1,), padding=(2,))
-      (1): Conv1d(128, 256, kernel_size=(5,), stride=(1,), padding=(2,))
-      (2): Conv1d(256, 256, kernel_size=(5,), stride=(1,), padding=(2,))
+    (pre): ParametrizedConv1d(
+      9984, 64, kernel_size=(1,), stride=(1,)
+      (parametrizations): ModuleDict(
+        (weight): ParametrizationList(
+          (0): _WeightNorm()
+        )
+      )
     )
-    (conv_post): Conv1d(256, 1, kernel_size=(3,), stride=(1,), padding=(1,))
+    (convs): ModuleList(
+      (0): ParametrizedConv1d(
+        64, 128, kernel_size=(5,), stride=(1,), padding=(2,)
+        (parametrizations): ModuleDict(
+          (weight): ParametrizationList(
+            (0): _WeightNorm()
+          )
+        )
+      )
+      (1): ParametrizedConv1d(
+        128, 256, kernel_size=(5,), stride=(1,), padding=(2,)
+        (parametrizations): ModuleDict(
+          (weight): ParametrizationList(
+            (0): _WeightNorm()
+          )
+        )
+      )
+      (2): ParametrizedConv1d(
+        256, 256, kernel_size=(5,), stride=(1,), padding=(2,)
+        (parametrizations): ModuleDict(
+          (weight): ParametrizationList(
+            (0): _WeightNorm()
+          )
+        )
+      )
+    )
+    (conv_post): ParametrizedConv1d(
+      256, 1, kernel_size=(3,), stride=(1,), padding=(1,)
+      (parametrizations): ModuleDict(
+        (weight): ParametrizationList(
+          (0): _WeightNorm()
+        )
+      )
+    )
   )
 )
