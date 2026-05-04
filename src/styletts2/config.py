@@ -114,10 +114,9 @@ class SLMAdvParamsConfig:
 
 @dataclass
 class DataParamsConfig:
-    train_data: str = "Data/train_list.txt"
-    val_data: str = "Data/val_list.txt"
+    train_data: str = "shethjenil/audiodata"
+    val_data: str = ""
     root_path: str = ""
-    ood_data: str = "Data/OOD_texts.txt"
     min_length: int = 50
 
 

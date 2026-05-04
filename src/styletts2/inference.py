@@ -27,10 +27,7 @@ class StyleTTS2Inference:
         # Load Model
         self.model = StyleTTS2Model.from_pretrained(model_path, self.config)
         self.model.to(self.device)
-        for key in self.model._modules:
-            if self.model._modules[key] is not None:
-                self.model._modules[key].eval()
-
+        self.model.eval()
         self.tokenizer = Tokenizer()
 
         # Initialize Sampler

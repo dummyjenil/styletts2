@@ -1,3 +1,5 @@
+from typing import Self
+
 import torch
 from torch import nn
 from transformers import AlbertConfig
@@ -140,8 +142,7 @@ class StyleTTS2Model(nn.Module):
         pass
 
     @classmethod
-    def from_pretrained(cls, path: str, config: StyleTTS2Config):
-        """Loads a pretrained checkpoint into the modular structure"""
+    def from_pretrained(cls, path: str, config: StyleTTS2Config) -> Self:
         model = cls(config)
         state = torch.load(path, map_location="cpu")
         model.load_state_dict(state, strict=False)
