@@ -17,9 +17,9 @@ from styletts2.models.losses import (
     DiscriminatorLoss,
     GeneratorLoss,
     MultiResolutionSTFTLoss,
-    SLMAdversarialLoss,
     WavLMLoss,
 )
+from styletts2.models.slm_loss import SLMAdversarialLoss
 from styletts2.models.styletts2 import StyleTTS2Model
 from styletts2.trainer.optimizer import build_optimizer
 from styletts2.utils.helpers import length_to_mask, maximum_path
@@ -141,10 +141,11 @@ class StyleTTS2Trainer:
             self._save_checkpoint(epoch)
             logger.info(f"Epoch {epoch + 1} took {time.time() - epoch_start_time:.2f}s")
 
-    def _train_step(self, batch, epoch, step):
+    def _train_step(self, batch, epoch, step):  # noqa: PLR0912
         model = self.model
         device = self.device
         loss_params = self.config.loss_params
+        loss_dict = {}
 
         waves = batch[0]
         batch = [b.to(device) for b in batch[1:]]
@@ -167,7 +168,7 @@ class StyleTTS2Trainer:
             if (
                 self.config.model_params.multispeaker
                 and epoch >= loss_params.diff_epoch
-            ):
+            ) or epoch >= loss_params.joint_epoch:
                 ref_ss = model.style_encoder(ref_mels.unsqueeze(1))
                 ref_sp = model.predictor_encoder(ref_mels.unsqueeze(1))
                 ref = torch.cat([ref_ss, ref_sp], dim=1)
@@ -319,9 +320,30 @@ class StyleTTS2Trainer:
 
         # SLM Adversarial
         if epoch >= loss_params.joint_epoch:
-            # Similar to train_finetune.py, call slmadv
-            # ...
-            pass
+            # Prepare inputs for SLM Adversarial Loss
+            slm_out = self.slmadv(
+                self.iters,
+                wav_clip.detach(),
+                y_rec.detach(),
+                waves,
+                mel_input_length,
+                _ref_texts,
+                _ref_lengths,
+                ref,
+            )
+
+            if slm_out is not None:
+                d_slm_loss, g_slm_loss, _ = slm_out
+
+                # Backpropagate SLM Losses
+                if d_slm_loss != 0:
+                    d_slm_loss.backward()
+
+                g_slm_loss.backward()
+
+                # Record losses
+                loss_dict["d_slm"] = d_slm_loss.item()
+                loss_dict["g_slm"] = g_slm_loss.item()
 
         return {
             "mel_loss": loss_mel.item(),
@@ -329,6 +351,8 @@ class StyleTTS2Trainer:
             "d_loss": d_loss.item(),
             "dur_loss": loss_dur.item(),
             "f0_loss": loss_f0_rec.item(),
+            "d_slm": loss_dict.get("d_slm", 0.0),
+            "g_slm": loss_dict.get("g_slm", 0.0),
         }
 
     def _compute_dur_ce_losses(self, d, d_gt, input_lengths, texts):

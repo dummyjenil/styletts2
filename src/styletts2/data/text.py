@@ -30,12 +30,4 @@ class TextCleaner:
         self.tokenizer = Tokenizer()
 
     def __call__(self, text: str) -> list[int]:
-        # Input text is assumed to be already phonemized (IPA format).
-        # We perform minimal cleaning to preserve phoneme integrity.
-        # 1. Strip whitespace
-        # 2. Convert to tokens using the tokenizer
-        text = text.strip()
-        # Note: Lowercasing is usually safe for IPA but we do it just in case
-        # the phonemizer outputs characters that match our letters list.
-        text = text.lower()
         return self.tokenizer.encode(text)

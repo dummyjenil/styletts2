@@ -25,6 +25,7 @@ class DecoderConfig:
     upsample_kernel_sizes: list[int] = field(default_factory=lambda: [20, 10, 6, 4])
     gen_istft_n_fft: int = 20
     gen_istft_hop_size: int = 5
+    disable_complex: bool = False
 
 
 @dataclass

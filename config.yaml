@@ -55,6 +55,7 @@ model_params:
     upsample_kernel_sizes: [20, 10, 6, 4]
     gen_istft_n_fft: 20
     gen_istft_hop_size: 5
+    disable_complex: true
   slm:
     model: "microsoft/wavlm-base-plus"
     sr: 16000

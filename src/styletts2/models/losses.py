@@ -209,28 +209,3 @@ class WavLMLoss(nn.Module):
         return (torch.mean((1 - y_df_hat_r) ** 2) + torch.mean(y_df_hat_g**2)).mean()
 
 
-class SLMAdversarialLoss(nn.Module):
-    def __init__(
-        self,
-        model,
-        wl,
-        sampler,
-        min_len=400,
-        max_len=500,
-        batch_percentage=0.5,
-        skip_update=1,
-        sig=1.5,
-    ):
-        super().__init__()
-        self.model = model
-        self.wl = wl
-        self.sampler = sampler
-        self.min_len = min_len
-        self.max_len = max_len
-        self.batch_percentage = batch_percentage
-        self.skip_update = skip_update
-        self.sig = sig
-
-    def forward(self, batch, epoch, iters):
-        # Placeholder for SLM Adversarial Loss implementation
-        return {}

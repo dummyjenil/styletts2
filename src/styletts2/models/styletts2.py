@@ -63,11 +63,13 @@ class StyleTTS2Model(nn.Module):
 
         # --- Decoder Selection ---
         if params.decoder.type == "istftnet":
+            decoder_params = params.decoder.__dict__.copy()
+            decoder_params.pop("type")
             self.decoder = ISTFTDecoder(
                 dim_in=params.hidden_dim,
                 style_dim=params.style_dim,
                 dim_out=params.n_mels,
-                **params.decoder.__dict__,
+                **decoder_params,
             )
         else:
             self.decoder = HiFiGANDecoder(
