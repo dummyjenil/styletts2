@@ -83,9 +83,9 @@ class StyleTTS2Inference:
         pred_dur = torch.round(duration.squeeze()).clamp(min=1)
 
         # 5. Manual Alignment
-        pred_aln_trg = torch.zeros(int(input_lengths.item()), int(pred_dur.sum().item())).to(
-            self.device
-        )
+        pred_aln_trg = torch.zeros(
+            int(input_lengths.item()), int(pred_dur.sum().item())
+        ).to(self.device)
         c_frame = 0
         for i in range(pred_aln_trg.size(0)):
             pred_aln_trg[i, c_frame : c_frame + int(pred_dur[i].item())] = 1
