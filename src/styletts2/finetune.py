@@ -36,7 +36,7 @@ def main():
         batch_size=config.batch_size,
         num_workers=4,
         device=device,
-        OOD_data=config.data_params.OOD_data,
+        ood_data=config.data_params.OOD_data,
         min_length=config.data_params.min_length,
         n_mels=config.model_params.n_mels,
     )
@@ -48,7 +48,7 @@ def main():
         num_workers=0,
         device=device,
         validation=True,
-        OOD_data=config.data_params.OOD_data,
+        ood_data=config.data_params.OOD_data,
         min_length=config.data_params.min_length,
         n_mels=config.model_params.n_mels,
     )
