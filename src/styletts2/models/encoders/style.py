@@ -1,5 +1,5 @@
 from torch import nn
-from torch.nn.utils import spectral_norm
+from torch.nn.utils.parametrizations import spectral_norm
 
 from styletts2.models.components import ResBlk
 

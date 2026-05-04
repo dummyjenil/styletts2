@@ -5,7 +5,7 @@ import torch
 import torch.nn.functional as F
 from scipy.signal import get_window
 from torch import Tensor, nn
-from torch.nn.utils import weight_norm
+from torch.nn.utils.parametrizations import weight_norm
 
 from styletts2.models.decoders.common import (
     LRELU_SLOPE,
