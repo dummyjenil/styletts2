@@ -243,7 +243,7 @@ class StyleTTS2LightningModule(pl.LightningModule):
 
         g_loss = (
             loss_params.lambda_mel * loss_mel
-            + loss_params.lambda_F0 * loss_f0_rec
+            + loss_params.lambda_f0 * loss_f0_rec
             + loss_params.lambda_ce * loss_ce
             + loss_params.lambda_norm * loss_norm_rec
             + loss_params.lambda_dur * loss_dur
@@ -332,16 +332,14 @@ class StyleTTS2LightningModule(pl.LightningModule):
             # Styles
             ref_ss = self.model.style_encoder(ref_mels.unsqueeze(1))
             ref_sp = self.model.predictor_encoder(ref_mels.unsqueeze(1))
-            s_trg = torch.cat([ref_ss, ref_sp], dim=1)
 
             # Encoders
             t_en = self.model.text_encoder(texts, input_lengths, text_mask)
-            bert_dur = self.model.bert(texts, attention_mask=(~text_mask).int())
-            
+
             # Predictor
             # For validation we use ground truth alignment if available, or just skip complex parts
             # Here we just want a proxy for convergence
-            _ppgs, s2s_pred, s2s_attn = self.model.text_aligner(mels, mask, texts)
+            _ppgs, _s2s_pred, s2s_attn = self.model.text_aligner(mels, mask, texts)
             s2s_attn = s2s_attn.transpose(-1, -2)[..., 1:].transpose(-1, -2)
             mask_st = mask_from_lens(s2s_attn, input_lengths, mel_input_length // (2**n_down))
             s2s_attn_mono = maximum_path(s2s_attn, mask_st)
@@ -358,10 +356,10 @@ class StyleTTS2LightningModule(pl.LightningModule):
             for w in waves:
                 pad_w = np.pad(w, (0, max_wave_len - w.shape[0]))
                 padded_waves.append(pad_w)
-            
+
             wave_tensor = torch.from_numpy(np.stack(padded_waves)).float().to(self.device).unsqueeze(1)
             loss_mel = self.stft_loss(y_rec, wave_tensor)
-            
+
             self.log("val/mel_loss", loss_mel, sync_dist=True, prog_bar=True)
 
         return loss_mel

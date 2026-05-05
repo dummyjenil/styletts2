@@ -87,7 +87,7 @@ class LossParamsConfig:
     lambda_slm: float = 1.0
     lambda_mono: float = 1.0
     lambda_s2s: float = 1.0
-    lambda_F0: float = 1.0
+    lambda_f0: float = 1.0
     lambda_norm: float = 1.0
     lambda_dur: float = 1.0
     lambda_ce: float = 20.0

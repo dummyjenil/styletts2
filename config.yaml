@@ -81,7 +81,7 @@ loss_params:
   lambda_slm: 1.0
   lambda_mono: 1.0
   lambda_s2s: 1.0
-  lambda_F0: 1.0
+  lambda_f0: 1.0
   lambda_norm: 1.0
   lambda_dur: 1.0
   lambda_ce: 20.0

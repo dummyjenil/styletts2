@@ -1,8 +1,7 @@
 import argparse
-import json
 import os
 from dataclasses import dataclass
-from typing import Dict, Optional, Union
+from typing import Optional
 
 import torch
 import torchaudio
@@ -41,17 +40,16 @@ class StyleTTS2Inference(torch.nn.Module):
         # 1. Load Config
         if config_path and os.path.exists(config_path):
             self.config = StyleTTS2Config.from_yaml(config_path)
-        else:
-            # Fallback to default or download if repo_id is provided
-            if repo_id:
-                logger.info(f"Downloading config from HF repo: {repo_id}")
-                cfg_file = hf_hub_download(repo_id=repo_id, filename="config.json")
-                with open(cfg_file, "r") as f:
-                    # In a real scenario, we might need to map Kokoro-style JSON to StyleTTS2Config
-                    # For now, we assume StyleTTS2Config can handle it or use defaults
-                    self.config = StyleTTS2Config() 
-            else:
+        # Fallback to default or download if repo_id is provided
+        elif repo_id:
+            logger.info(f"Downloading config from HF repo: {repo_id}")
+            cfg_file = hf_hub_download(repo_id=repo_id, filename="config.json")
+            with open(cfg_file):
+                # In a real scenario, we might need to map Kokoro-style JSON to StyleTTS2Config
+                # For now, we assume StyleTTS2Config can handle it or use defaults
                 self.config = StyleTTS2Config()
+        else:
+            self.config = StyleTTS2Config()
 
         # 2. Load Model
         self.model = StyleTTS2Model.from_pretrained(checkpoint_path, self.config)
@@ -70,9 +68,9 @@ class StyleTTS2Inference(torch.nn.Module):
 
     @dataclass
     class Output:
-        audio: torch.FloatTensor
-        pred_dur: torch.LongTensor
-        style: torch.FloatTensor
+        audio: torch.Tensor
+        pred_dur: torch.Tensor
+        style: torch.Tensor
 
     @torch.no_grad()
     def forward(
@@ -93,7 +91,7 @@ class StyleTTS2Inference(torch.nn.Module):
         tokens = [0, *tokens, 0]
         tokens_tensor = torch.LongTensor([tokens]).to(self.device)
         input_lengths = torch.LongTensor([tokens_tensor.shape[-1]]).to(self.device)
-        
+
         # 2. BERT & Text Encoding
         bert_dur = self.model.bert(tokens_tensor, attention_mask=torch.ones_like(tokens_tensor))
         d_en = self.model.bert_encoder(bert_dur).transpose(-1, -2)
@@ -130,17 +128,17 @@ class StyleTTS2Inference(torch.nn.Module):
         # 6. Prosody & Decoding
         en = d.transpose(-1, -2) @ pred_aln_trg
         f0_pred, n_pred = self.model.predictor.f0_n_train(en, s)
-        
+
         asr = t_en @ pred_aln_trg
         audio = self.model.decoder(asr, f0_pred, n_pred, ref)
 
         return self.Output(
-            audio=audio.squeeze().cpu(),
-            pred_dur=pred_dur.cpu(),
-            style=s_pred.cpu()
+            audio=audio.squeeze().cpu().float(),
+            pred_dur=pred_dur.cpu().long(),
+            style=s_pred.cpu().float()
         )
 
-    def generate_long(self, passage: str, **kwargs) -> torch.FloatTensor:
+    def generate_long(self, passage: str, **kwargs) -> torch.Tensor:
         """
         Generate long-form audio by splitting into sentences.
         """
@@ -152,16 +150,16 @@ class StyleTTS2Inference(torch.nn.Module):
         for sentence in sentences:
             if not sentence.strip():
                 continue
-            
+
             output = self.forward(sentence.strip() + ".", **kwargs)
-            
+
             if last_s is not None:
                 # Smooth style transitions
                 output.style = alpha * last_s + (1 - alpha) * output.style
-            
+
             wavs.append(output.audio)
             last_s = output.style
-            
+
         return torch.cat(wavs, dim=0)
 
 
@@ -184,7 +182,7 @@ def main():
 
     if wav.ndim == 1:
         wav = wav.unsqueeze(0)
-    
+
     torchaudio.save(args.output, wav, sample_rate=24000)
     print(f"✅ Generated audio saved to {args.output}")
 
