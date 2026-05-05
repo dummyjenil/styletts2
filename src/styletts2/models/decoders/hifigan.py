@@ -119,6 +119,8 @@ class HiFiGANDecoder(nn.Module):
     def __init__(
         self,
         hidden_dim=1024,
+        decoder_out_dim=512,
+        asr_res_in=512,
         dim_in=512,
         style_dim=64,
         resblock_kernel_sizes=None,
@@ -142,12 +144,12 @@ class HiFiGANDecoder(nn.Module):
                 AdainResBlk1d(hidden_dim + 2 + 64, hidden_dim, style_dim),
                 AdainResBlk1d(hidden_dim + 2 + 64, hidden_dim, style_dim),
                 AdainResBlk1d(hidden_dim + 2 + 64, hidden_dim, style_dim),
-                AdainResBlk1d(hidden_dim + 2 + 64, 512, style_dim, upsample=True),
+                AdainResBlk1d(hidden_dim + 2 + 64, decoder_out_dim, style_dim, upsample=True),
             ]
         )
         self.F0_conv = weight_norm(nn.Conv1d(1, 1, 3, 2, padding=1))
         self.N_conv = weight_norm(nn.Conv1d(1, 1, 3, 2, padding=1))
-        self.asr_res = nn.Sequential(weight_norm(nn.Conv1d(512, 64, 1)))
+        self.asr_res = nn.Sequential(weight_norm(nn.Conv1d(asr_res_in, 64, 1)))
         self.generator = Generator(
             style_dim,
             resblock_kernel_sizes,

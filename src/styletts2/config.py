@@ -20,6 +20,8 @@ class DecoderConfig:
     upsample_rates: list[int] = field(default_factory=lambda: [10, 5, 3, 2])
     upsample_initial_channel: int = 512
     hidden_dim: int = 1024
+    decoder_out_dim: int = 512
+    asr_res_in: int = 512
     resblock_dilation_sizes: list[list[int]] = field(
         default_factory=lambda: [[1, 3, 5], [1, 3, 5], [1, 3, 5]]
     )
