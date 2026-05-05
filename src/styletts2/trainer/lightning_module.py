@@ -328,7 +328,7 @@ class StyleTTS2LightningModule(pl.LightningModule):
         text_mask = length_to_mask(input_lengths).to(self.device)
 
         # Basic validation: compute mel reconstruction loss
-        with torch.no_grad():
+        with torch.inference_mode():
             # Styles
             ref_ss = self.model.style_encoder(ref_mels.unsqueeze(1))
             ref_sp = self.model.predictor_encoder(ref_mels.unsqueeze(1))

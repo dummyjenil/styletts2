@@ -72,7 +72,7 @@ class StyleTTS2Inference(torch.nn.Module):
         pred_dur: torch.Tensor
         style: torch.Tensor
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def forward(
         self,
         text: str,
