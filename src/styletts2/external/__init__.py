@@ -8,6 +8,8 @@ from transformers import AlbertModel
 
 
 class CustomAlbert(AlbertModel):
+    def __init__(self, config):
+        super().__init__(config, False)
     def forward(self, *args, **kwargs):
         outputs = super().forward(*args, **kwargs)
         return outputs.last_hidden_state

@@ -19,6 +19,7 @@ class DecoderConfig:
     resblock_kernel_sizes: list[int] = field(default_factory=lambda: [3, 7, 11])
     upsample_rates: list[int] = field(default_factory=lambda: [10, 5, 3, 2])
     upsample_initial_channel: int = 512
+    hidden_dim: int = 1024
     resblock_dilation_sizes: list[list[int]] = field(
         default_factory=lambda: [[1, 3, 5], [1, 3, 5], [1, 3, 5]]
     )
@@ -84,7 +85,7 @@ class LossParamsConfig:
     lambda_slm: float = 1.0
     lambda_mono: float = 1.0
     lambda_s2s: float = 1.0
-    lambda_f0: float = 1.0
+    lambda_F0: float = 1.0
     lambda_norm: float = 1.0
     lambda_dur: float = 1.0
     lambda_ce: float = 20.0

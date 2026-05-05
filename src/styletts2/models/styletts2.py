@@ -58,14 +58,12 @@ class StyleTTS2Model(nn.Module):
             self.decoder = ISTFTDecoder(
                 dim_in=params.hidden_dim,
                 style_dim=params.style_dim,
-                dim_out=params.n_mels,
                 **decoder_params,
             )
         else:
             self.decoder = HiFiGANDecoder(
                 dim_in=params.hidden_dim,
                 style_dim=params.style_dim,
-                dim_out=params.n_mels,
                 resblock_kernel_sizes=params.decoder.resblock_kernel_sizes,
                 upsample_rates=params.decoder.upsample_rates,
                 upsample_initial_channel=params.decoder.upsample_initial_channel,

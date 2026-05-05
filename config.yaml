@@ -45,6 +45,7 @@ model_params:
   dropout: 0.2
   decoder:
     type: "istftnet"
+    hidden_dim: 256
     resblock_kernel_sizes: [3, 7]
     upsample_rates: [10, 6]
     upsample_initial_channel: 128

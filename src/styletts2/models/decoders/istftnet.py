@@ -347,10 +347,9 @@ class Generator(nn.Module):
 class ISTFTDecoder(nn.Module):
     def __init__(
         self,
+        hidden_dim=1024,
         dim_in=512,
-        f0_channel=512,
         style_dim=64,
-        dim_out=80,
         resblock_kernel_sizes=None,
         upsample_rates=None,
         upsample_initial_channel=512,
@@ -369,13 +368,13 @@ class ISTFTDecoder(nn.Module):
         if resblock_kernel_sizes is None:
             resblock_kernel_sizes = [3, 7, 11]
         super().__init__()
-        self.encode = AdainResBlk1d(dim_in + 2, 1024, style_dim)
+        self.encode = AdainResBlk1d(dim_in + 2, hidden_dim, style_dim)
         self.decode = nn.ModuleList(
             [
-                AdainResBlk1d(1024 + 2 + 64, 1024, style_dim),
-                AdainResBlk1d(1024 + 2 + 64, 1024, style_dim),
-                AdainResBlk1d(1024 + 2 + 64, 1024, style_dim),
-                AdainResBlk1d(1024 + 2 + 64, 512, style_dim, upsample=True),
+                AdainResBlk1d(hidden_dim + 2 + 64, hidden_dim, style_dim),
+                AdainResBlk1d(hidden_dim + 2 + 64, hidden_dim, style_dim),
+                AdainResBlk1d(hidden_dim + 2 + 64, hidden_dim, style_dim),
+                AdainResBlk1d(hidden_dim + 2 + 64, 512, style_dim, upsample=True),
             ]
         )
         self.F0_conv = weight_norm(nn.Conv1d(1, 1, 3, 2, padding=1))
