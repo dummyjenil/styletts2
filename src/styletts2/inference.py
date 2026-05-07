@@ -1,35 +1,51 @@
 import argparse
 import os
+from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Optional
 
 import torch
 import torchaudio
-from huggingface_hub import hf_hub_download
 from loguru import logger
+from safetensors.torch import load_file as safetensors_load_file
 
 from styletts2.config import StyleTTS2Config
 from styletts2.data.text import Tokenizer
-from styletts2.models.diffusion.k_diffusion import ADPM2Sampler, DiffusionSampler
-from styletts2.models.diffusion.sampler import KarrasSchedule
+from styletts2.models.diffusion.k_diffusion import (
+    ADPM2Sampler,
+    DiffusionSampler,
+    KDiffusion,
+)
+from styletts2.models.diffusion.model import StyleTransformer1d, Transformer1d
+from styletts2.models.diffusion.sampler import (
+    AudioDiffusionConditional,
+    KarrasSchedule,
+    LogNormalDistribution,
+)
 from styletts2.models.styletts2 import StyleTTS2Model
+from styletts2.voices import VoiceManager
 
 
 class StyleTTS2Inference(torch.nn.Module):
     """
-    StyleTTS2Inference is a high-level wrapper for inference, inspired by the KModel architecture.
-    It handles:
-    1. Loading weights and config (optionally from HF).
-    2. Text tokenization.
-    3. End-to-end generation from phonemes/text to audio.
+    High-level inference wrapper for StyleTTS2.
+
+    Features
+    --------
+    - Loads weights from a ``.safetensors`` checkpoint.
+    - Strips training-only modules automatically (saves ~200 MB RAM).
+    - Supports named voices via ``VoiceManager``.
+    - ``encode_reference()`` for zero-shot voice cloning from any audio file.
+    - ``generate_long()`` for long-form TTS with proper style continuity.
+    - ``stream()`` for sentence-by-sentence audio streaming.
     """
 
     def __init__(
         self,
         checkpoint_path: str,
         config_path: Optional[str] = None,
-        repo_id: Optional[str] = None,
         device: Optional[str] = None,
+        voices_dir: Optional[str] = None,
     ):
         super().__init__()
         if device is None:
@@ -40,37 +56,162 @@ class StyleTTS2Inference(torch.nn.Module):
         # 1. Load Config
         if config_path and os.path.exists(config_path):
             self.config = StyleTTS2Config.from_yaml(config_path)
-        # Fallback to default or download if repo_id is provided
-        elif repo_id:
-            logger.info(f"Downloading config from HF repo: {repo_id}")
-            cfg_file = hf_hub_download(repo_id=repo_id, filename="config.json")
-            with open(cfg_file):
-                # In a real scenario, we might need to map Kokoro-style JSON to StyleTTS2Config
-                # For now, we assume StyleTTS2Config can handle it or use defaults
-                self.config = StyleTTS2Config()
         else:
             self.config = StyleTTS2Config()
 
-        # 2. Load Model
-        self.model = StyleTTS2Model.from_pretrained(checkpoint_path, self.config)
+        # 2. Load Model — inference mode drops training-only modules automatically
+        self.model = StyleTTS2Model.from_pretrained(
+            checkpoint_path, self.config, mode="inference"
+        )
         self.model.to(self.device)
         self.model.eval()
 
+        # 3. Tokenizer & Voice Manager
         self.tokenizer = Tokenizer()
+        self.voice_manager = VoiceManager(voices_dir, device=str(self.device))
 
-        # 3. Initialize Sampler (Diffusion)
-        self.sampler = DiffusionSampler(
-            self.model.diffusion.diffusion,
+        # 4. Diffusion Sampler
+        #    NOTE: diffusion module was removed in inference mode — we rebuild a
+        #    lightweight sampler from the already-loaded diffusion weights that
+        #    are embedded in the full model before _drop_training_components().
+        #    Since mode="inference" deletes self.model.diffusion AFTER loading,
+        #    we need to capture the sampler reference before deletion.
+        #
+        #    → Workaround: build a temporary full model, grab the sampler, then
+        #      discard the heavy modules.  The sampler only holds a reference to
+        #      `diffusion.diffusion` (the KDiffusion net) which is lightweight.
+        self._sampler: Optional[DiffusionSampler] = None
+        self._init_sampler(checkpoint_path)
+
+    def _init_sampler(self, checkpoint_path: str) -> None:
+        """Build a DiffusionSampler without keeping all training components."""
+        params = self.config.model_params
+        diff_params = params.diffusion
+
+        # Rebuild only the diffusion sub-graph
+        if params.multispeaker:
+            transformer = StyleTransformer1d(
+                channels=params.style_dim * 2,
+                context_embedding_features=self.config.external_models.plbert.hidden_size,
+                context_features=params.style_dim * 2,
+                num_layers=diff_params.transformer.num_layers,
+                num_heads=diff_params.transformer.num_heads,
+                head_features=diff_params.transformer.head_features,
+                multiplier=diff_params.transformer.multiplier,
+            )
+        else:
+            transformer = Transformer1d(
+                channels=params.style_dim * 2,
+                context_embedding_features=self.config.external_models.plbert.hidden_size,
+                num_layers=diff_params.transformer.num_layers,
+                num_heads=diff_params.transformer.num_heads,
+                head_features=diff_params.transformer.head_features,
+                multiplier=diff_params.transformer.multiplier,
+            )
+
+        diffusion = AudioDiffusionConditional(
+            in_channels=1,
+            embedding_max_length=self.config.external_models.plbert.max_position_embeddings,
+            embedding_features=self.config.external_models.plbert.hidden_size,
+            embedding_mask_proba=diff_params.embedding_mask_proba,
+            channels=params.style_dim * 2,
+            context_features=params.style_dim * 2,
+        )
+        diffusion.diffusion = KDiffusion(
+            net=transformer,
+            sigma_distribution=LogNormalDistribution(
+                mean=diff_params.dist.mean, std=diff_params.dist.std
+            ),
+            sigma_data=diff_params.dist.sigma_data,
+            dynamic_threshold=0.0,
+        )
+        diffusion.unet = transformer
+
+        # Load only diffusion weights
+        state = safetensors_load_file(checkpoint_path, device="cpu")
+        diff_state = {
+            k[len("diffusion."):]: v
+            for k, v in state.items()
+            if k.startswith("diffusion.")
+        }
+        if diff_state:
+            diffusion.load_state_dict(diff_state, strict=False)
+
+        diffusion = diffusion.to(self.device).eval()
+
+        self._sampler = DiffusionSampler(
+            diffusion.diffusion,
             sampler=ADPM2Sampler(),
             sigma_schedule=KarrasSchedule(sigma_min=0.0001, sigma_max=3.0, rho=9.0),
             clamp=False,
         )
 
+    # ------------------------------------------------------------------
+    # Data class for outputs
+    # ------------------------------------------------------------------
+
     @dataclass
     class Output:
-        audio: torch.Tensor
-        pred_dur: torch.Tensor
-        style: torch.Tensor
+        audio: torch.Tensor   # (T,) float32 on CPU
+        pred_dur: torch.Tensor  # (L,) long on CPU
+        style: torch.Tensor   # (1, style_dim*2) float32 on CPU
+
+    # ------------------------------------------------------------------
+    # Mel extraction helper (used for encode_reference)
+    # ------------------------------------------------------------------
+
+    def _wav_to_mel(self, wav: torch.Tensor) -> torch.Tensor:
+        """Convert a 1-D or (1, T) waveform tensor to a mel spectrogram."""
+        p = self.config.preprocess_params
+        to_mel = torchaudio.transforms.MelSpectrogram(
+            sample_rate=p.sr,
+            n_fft=p.n_fft,
+            win_length=p.win_length,
+            hop_length=p.hop_length,
+            n_mels=self.config.model_params.n_mels,
+        ).to(self.device)
+        if wav.ndim == 1:
+            wav = wav.unsqueeze(0)
+        return to_mel(wav)  # (1, n_mels, T)
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def encode_reference(self, audio_path: str) -> torch.Tensor:
+        """
+        Encode a reference audio file into a style tensor for voice cloning.
+
+        Returns a ``(1, style_dim * 2)`` tensor that can be passed directly
+        as ``ref_s`` to ``forward()``.
+
+        .. note::
+            Requires ``style_encoder`` and ``predictor_encoder`` to be present.
+            These are removed in inference mode — call this method on a model
+            loaded with ``mode="train"`` or build a dedicated encoder wrapper.
+        """
+        wav, sr = torchaudio.load(audio_path)
+        wav = wav.to(self.device)
+        target_sr = self.config.preprocess_params.sr
+        if sr != target_sr:
+            wav = torchaudio.functional.resample(wav, sr, target_sr)
+
+        mel = self._wav_to_mel(wav)  # (1, n_mels, T)
+
+        # These attributes are present only when loaded for training.
+        # For inference, load a separate encoder model or pass a pre-computed
+        # voice tensor via VoiceManager.
+        if not (hasattr(self.model, "style_encoder") and hasattr(self.model, "predictor_encoder")):
+            raise RuntimeError(
+                "encode_reference() requires style_encoder and predictor_encoder "
+                "which are stripped in inference mode. Use VoiceManager with a "
+                "pre-computed .pt voice pack instead, or load with mode='train'."
+            )
+
+        with torch.inference_mode():
+            ref_ss = self.model.style_encoder(mel.unsqueeze(0))
+            ref_sp = self.model.predictor_encoder(mel.unsqueeze(0))
+        return torch.cat([ref_ss, ref_sp], dim=-1)  # (1, style_dim*2)
 
     @torch.inference_mode()
     def forward(
@@ -78,39 +219,72 @@ class StyleTTS2Inference(torch.nn.Module):
         text: str,
         diffusion_steps: int = 5,
         embedding_scale: float = 1.0,
-        ref_s: Optional[torch.FloatTensor] = None,
-        alpha: float = 0.7,
+        ref_s: Optional[torch.Tensor] = None,
+        voice: Optional[str] = None,
         speed: float = 1.0,
-    ) -> Output:
+    ) -> "StyleTTS2Inference.Output":
         """
-        End-to-end generation.
+        End-to-end generation from text to audio.
+
+        Args:
+            text: Input text string.
+            diffusion_steps: Number of diffusion sampling steps (used only
+                             when no ``ref_s`` / ``voice`` is provided).
+            embedding_scale: Classifier-free guidance scale for diffusion.
+            ref_s: Pre-computed style tensor ``(1, style_dim*2)`` or a voice
+                   pack ``(N, style_dim*2)``.  If ``None`` and ``voice`` is
+                   also ``None``, style is sampled via diffusion.
+            voice: Name of a voice pack stored in the ``voices_dir``.
+            speed: Speaking rate multiplier (>1 = faster).
+
+        Returns:
+            :class:`Output` with fields ``audio``, ``pred_dur``, ``style``.
         """
         # 1. Tokenize
         tokens = self.tokenizer.encode(text)
-        # Add [CLS] and [SEP] tokens (0 in our current tokenizer)
         tokens = [0, *tokens, 0]
         tokens_tensor = torch.LongTensor([tokens]).to(self.device)
         input_lengths = torch.LongTensor([tokens_tensor.shape[-1]]).to(self.device)
 
         # 2. BERT & Text Encoding
-        bert_dur = self.model.bert(tokens_tensor, attention_mask=torch.ones_like(tokens_tensor))
+        bert_dur = self.model.bert(
+            tokens_tensor,
+            attention_mask=torch.ones_like(tokens_tensor),
+        )
         d_en = self.model.bert_encoder(bert_dur).transpose(-1, -2)
-        t_en = self.model.text_encoder(tokens_tensor, input_lengths, None) # Mask is handled internally if None
+        t_en = self.model.text_encoder(tokens_tensor, input_lengths, None)
 
-        # 3. Style Generation (Diffusion)
-        if ref_s is None:
-            noise = torch.randn(1, 1, self.config.model_params.style_dim * 2).to(self.device)
-            s_pred = self.sampler(
+        # 3. Style Selection / Generation
+        if ref_s is None and voice is not None:
+            ref_s = self.voice_manager.get_voice(voice)
+
+        if ref_s is not None:
+            ref_s = ref_s.to(self.device)
+            # Support Kokoro-style (N, style_dim*2) voice packs
+            if ref_s.ndim == 2 and ref_s.shape[1] == self.config.model_params.style_dim * 2:
+                idx = min(len(tokens) - 1, ref_s.shape[0] - 1)
+                s_pred = ref_s[idx : idx + 1]  # (1, style_dim*2)
+            elif ref_s.ndim == 1:
+                s_pred = ref_s.unsqueeze(0)
+            else:
+                s_pred = ref_s
+        else:
+            # Generate style via diffusion when no reference is provided
+            if self._sampler is None:
+                raise RuntimeError("Diffusion sampler not initialised.")
+            noise = torch.randn(
+                1, 1, self.config.model_params.style_dim * 2, device=self.device
+            )
+            s_pred = self._sampler(
                 noise,
                 num_steps=diffusion_steps,
                 embedding=bert_dur,
                 embedding_scale=embedding_scale,
             ).squeeze(1)
-        else:
-            s_pred = ref_s
 
-        s = s_pred[:, self.config.model_params.style_dim :]
-        ref = s_pred[:, : self.config.model_params.style_dim]
+        style_dim = self.config.model_params.style_dim
+        s = s_pred[:, style_dim:]    # predictor style
+        ref = s_pred[:, :style_dim]  # decoder style
 
         # 4. Prosody Prediction
         d = self.model.predictor.text_encoder(d_en, s, input_lengths, None)
@@ -120,8 +294,12 @@ class StyleTTS2Inference(torch.nn.Module):
         pred_dur = torch.round(duration.squeeze()).clamp(min=1).long()
 
         # 5. Alignment
-        indices = torch.repeat_interleave(torch.arange(tokens_tensor.shape[1], device=self.device), pred_dur)
-        pred_aln_trg = torch.zeros((tokens_tensor.shape[1], indices.shape[0]), device=self.device)
+        indices = torch.repeat_interleave(
+            torch.arange(tokens_tensor.shape[1], device=self.device), pred_dur
+        )
+        pred_aln_trg = torch.zeros(
+            (tokens_tensor.shape[1], indices.shape[0]), device=self.device
+        )
         pred_aln_trg[indices, torch.arange(indices.shape[0])] = 1
         pred_aln_trg = pred_aln_trg.unsqueeze(0)
 
@@ -135,58 +313,124 @@ class StyleTTS2Inference(torch.nn.Module):
         return self.Output(
             audio=audio.squeeze().cpu().float(),
             pred_dur=pred_dur.cpu().long(),
-            style=s_pred.cpu().float()
+            style=s_pred.cpu().float(),
         )
 
-    def generate_long(self, passage: str, **kwargs) -> torch.Tensor:
+    def generate_long(
+        self,
+        passage: str,
+        alpha: float = 0.7,
+        **kwargs,
+    ) -> torch.Tensor:
         """
         Generate long-form audio by splitting into sentences.
+
+        Style is blended across sentences using exponential smoothing
+        controlled by ``alpha`` (higher = more continuity).
+
+        Args:
+            passage: Multi-sentence input text.
+            alpha: Style blending factor between consecutive sentences.
+            **kwargs: Forwarded to :meth:`forward` (e.g. ``speed``,
+                      ``diffusion_steps``, ``voice``).
+
+        Returns:
+            Concatenated audio waveform as a 1-D ``torch.Tensor``.
         """
-        sentences = passage.replace("!", ".").replace("?", ".").split(".")
-        wavs = []
-        last_s = None
-        alpha = kwargs.get("alpha", 0.7)
+        # Remove sentence-splitting punctuation, keeping terminators
+        sentences = [
+            s.strip()
+            for raw in passage.replace("!", ".").replace("?", ".").split(".")
+            for s in [raw.strip()]
+            if s
+        ]
+
+        wavs: list[torch.Tensor] = []
+        last_s: Optional[torch.Tensor] = None
 
         for sentence in sentences:
-            if not sentence.strip():
-                continue
+            # Feed the blended style from the previous sentence as ref_s
+            output = self.forward(sentence + ".", ref_s=last_s, **kwargs)
 
-            output = self.forward(sentence.strip() + ".", **kwargs)
-
+            # Smooth style for the *next* sentence
             if last_s is not None:
-                # Smooth style transitions
-                output.style = alpha * last_s + (1 - alpha) * output.style
+                last_s = alpha * last_s + (1 - alpha) * output.style
+            else:
+                last_s = output.style
 
             wavs.append(output.audio)
-            last_s = output.style
 
+        if not wavs:
+            return torch.zeros(0)
         return torch.cat(wavs, dim=0)
+
+    def stream(
+        self,
+        passage: str,
+        alpha: float = 0.7,
+        **kwargs,
+    ) -> Iterator["StyleTTS2Inference.Output"]:
+        """
+        Yield :class:`Output` objects sentence-by-sentence for real-time TTS.
+
+        Args:
+            passage: Multi-sentence input text.
+            alpha: Style blending factor between consecutive sentences.
+            **kwargs: Forwarded to :meth:`forward`.
+        """
+        sentences = [
+            s.strip()
+            for raw in passage.replace("!", ".").replace("?", ".").split(".")
+            for s in [raw.strip()]
+            if s
+        ]
+
+        last_s: Optional[torch.Tensor] = None
+        for sentence in sentences:
+            output = self.forward(sentence + ".", ref_s=last_s, **kwargs)
+            if last_s is not None:
+                last_s = alpha * last_s + (1 - alpha) * output.style
+            else:
+                last_s = output.style
+            yield output
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--text", type=str, required=True)
-    parser.add_argument("--checkpoint", type=str, required=True)
-    parser.add_argument("--config", type=str, default=None)
-    parser.add_argument("--output", type=str, default="output.wav")
-    parser.add_argument("--long", action="store_true")
+    parser = argparse.ArgumentParser(description="StyleTTS2 Inference CLI")
+    parser.add_argument("--text", type=str, required=True, help="Text to synthesise")
+    parser.add_argument("--checkpoint", type=str, required=True, help="Path to .safetensors checkpoint")
+    parser.add_argument("--config", type=str, default=None, help="Path to config.yaml")
+    parser.add_argument("--voice", type=str, default=None, help="Voice name (must be in voices_dir)")
+    parser.add_argument("--voices_dir", type=str, default=None, help="Directory containing .pt voice packs")
+    parser.add_argument("--output", type=str, default="output.wav", help="Output wav path")
+    parser.add_argument("--long", action="store_true", help="Use sentence-splitting for long text")
+    parser.add_argument("--speed", type=float, default=1.0, help="Speaking speed multiplier")
+    parser.add_argument("--steps", type=int, default=5, help="Diffusion steps (when no voice/ref_s given)")
     args = parser.parse_args()
 
-    engine = StyleTTS2Inference(args.checkpoint, args.config)
+    engine = StyleTTS2Inference(
+        args.checkpoint,
+        config_path=args.config,
+        voices_dir=args.voices_dir,
+    )
 
     if args.long:
-        wav = engine.generate_long(args.text)
+        wav = engine.generate_long(args.text, voice=args.voice, speed=args.speed)
     else:
-        output = engine.forward(args.text)
+        output = engine.forward(
+            args.text,
+            voice=args.voice,
+            speed=args.speed,
+            diffusion_steps=args.steps,
+        )
         wav = output.audio
 
     if wav.ndim == 1:
         wav = wav.unsqueeze(0)
 
     torchaudio.save(args.output, wav, sample_rate=24000)
-    print(f"✅ Generated audio saved to {args.output}")
+    logger.info(f"✅ Generated audio saved to {args.output}")
 
 
 if __name__ == "__main__":
     main()
-

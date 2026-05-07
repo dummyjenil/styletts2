@@ -1,3 +1,4 @@
+import logging
 import random
 from typing import Any
 
@@ -18,6 +19,8 @@ from styletts2.models.losses import (
 )
 from styletts2.models.slm_loss import SLMAdversarialLoss
 from styletts2.utils.helpers import length_to_mask, maximum_path
+
+_logger = logging.getLogger(__name__)
 
 
 def log_norm(x, mean=-4, std=4, dim=2):
@@ -43,6 +46,12 @@ class StyleTTS2LightningModule(pl.LightningModule):
             config.model_params.slm.sr,
         )
         self.stft_loss = MultiResolutionSTFTLoss()
+
+        # Freeze the WavLM backbone — only the wd discriminator head trains.
+        # Training the full WavLM backbone offers negligible TTS benefit and
+        # wastes VRAM / compute.
+        for p in self.wl.wavlm.parameters():
+            p.requires_grad_(False)
 
         self.sampler = DiffusionSampler(
             model.diffusion.diffusion,
@@ -147,8 +156,13 @@ class StyleTTS2LightningModule(pl.LightningModule):
         try:
             _ppgs, s2s_pred, s2s_attn = self.model.text_aligner(mels, mask, texts)
             s2s_attn = s2s_attn.transpose(-1, -2)[..., 1:].transpose(-1, -2)
-        except Exception:
-            return None
+        except Exception as exc:
+            _logger.warning(
+                "text_aligner failed on batch %d (epoch %d): %s — skipping.",
+                batch_idx, self.current_epoch, exc,
+            )
+            # Return a zero-scalar loss so Lightning's grad scaling stays valid.
+            return torch.tensor(0.0, requires_grad=True, device=self.device)
 
         mask_st = mask_from_lens(s2s_attn, input_lengths, mel_input_length // (2**n_down))
         s2s_attn_mono = maximum_path(s2s_attn, mask_st)
@@ -164,8 +178,9 @@ class StyleTTS2LightningModule(pl.LightningModule):
             mel = mels[bib, :, : mel_input_length[bib]].unsqueeze(0).unsqueeze(1)
             ss.append(self.model.predictor_encoder(mel))
             gs.append(self.model.style_encoder(mel))
-        s_dur = torch.stack(ss).squeeze()
-        gs = torch.stack(gs).squeeze()
+        # Use squeeze(1) — bare squeeze() collapses the batch dim when B=1.
+        s_dur = torch.stack(ss).squeeze(1)
+        gs = torch.stack(gs).squeeze(1)
         s_trg = torch.cat([gs, s_dur], dim=-1).detach()
 
         bert_dur = self.model.bert(texts, attention_mask=(~text_mask).int())
@@ -288,7 +303,10 @@ class StyleTTS2LightningModule(pl.LightningModule):
         sched_gen.step()
         sched_msd.step()
         sched_mpd.step()
-        sched_wd.step()
+        # Only advance WD scheduler once it is actually training to preserve
+        # its LR budget for the epochs it matters.
+        if self.current_epoch >= loss_params.joint_epoch:
+            sched_wd.step()
 
         # Logging
         self.log("train/mel_loss", loss_mel, prog_bar=True)

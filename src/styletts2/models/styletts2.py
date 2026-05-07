@@ -1,6 +1,6 @@
-from typing import Self
+from typing import Literal, Self
 
-import torch
+from safetensors.torch import load_file as safetensors_load_file
 from torch import nn
 from transformers import AlbertConfig
 
@@ -20,6 +20,18 @@ from styletts2.models.discriminators.wavlm import WavLMDiscriminator
 from styletts2.models.encoders.prosody import ProsodyPredictor
 from styletts2.models.encoders.style import StyleEncoder
 from styletts2.models.encoders.text import TextEncoder
+
+# Components only needed during training
+_TRAINING_ONLY_ATTRS = [
+    "wd",
+    "msd",
+    "mpd",
+    "pitch_extractor",
+    "text_aligner",
+    "diffusion",
+    "predictor_encoder",
+    "style_encoder",
+]
 
 
 class StyleTTS2Model(nn.Module):
@@ -70,7 +82,6 @@ class StyleTTS2Model(nn.Module):
                 resblock_dilation_sizes=params.decoder.resblock_dilation_sizes,
                 upsample_kernel_sizes=params.decoder.upsample_kernel_sizes,
             )
-
 
         self.style_encoder = StyleEncoder(
             dim_in=params.dim_in,
@@ -136,13 +147,134 @@ class StyleTTS2Model(nn.Module):
             params.slm.hidden, params.slm.nlayers, params.slm.initial_channel
         )
 
+    def _drop_training_components(self) -> None:
+        """Remove training-only modules to save RAM during inference."""
+        for attr in _TRAINING_ONLY_ATTRS:
+            if hasattr(self, attr):
+                delattr(self, attr)
+
     def forward(self, *args, **kwargs):
         """Forward pass for training or inference can be implemented here"""
         pass
 
+    # ------------------------------------------------------------------
+    # Factory helpers
+    # ------------------------------------------------------------------
+
     @classmethod
-    def from_pretrained(cls, path: str, config: StyleTTS2Config) -> Self:
+    def from_pretrained(
+        cls,
+        path: str,
+        config: StyleTTS2Config,
+        mode: Literal["inference", "train"] = "inference",
+    ) -> Self:
+        """
+        Load a model from a safetensors checkpoint.
+
+        Args:
+            path: Path to the .safetensors checkpoint file.
+            config: StyleTTS2Config instance.
+            mode: ``"inference"`` strips training-only modules (wd, msd, mpd,
+                  pitch_extractor, text_aligner, diffusion, predictor_encoder,
+                  style_encoder) after loading to save RAM.
+                  ``"train"`` keeps all modules.
+        """
         model = cls(config)
-        state = torch.load(path, map_location="cpu")
+        state = safetensors_load_file(path, device="cpu")
         model.load_state_dict(state, strict=False)
+        if mode == "inference":
+            model._drop_training_components()
+        return model
+
+    @classmethod
+    def from_pretrained_split(
+        cls,
+        slim_path: str,
+        large_path: str,
+        config: StyleTTS2Config,
+    ) -> Self:
+        """
+        Load the generator weights from a slim safetensors checkpoint and the
+        training-only components (text_aligner, pitch_extractor, wd, msd, mpd)
+        from a second large safetensors checkpoint.
+
+        Both paths must point to ``.safetensors`` files.
+        """
+        model = cls(config)
+
+        # Generator from slim model
+        slim_state = safetensors_load_file(slim_path, device="cpu")
+        model.load_state_dict(slim_state, strict=False)
+
+        # Training components from large model
+        large_state = safetensors_load_file(large_path, device="cpu")
+        training_keys = ["text_aligner.", "pitch_extractor.", "wd.", "msd.", "mpd."]
+        filtered = {
+            k: v
+            for k, v in large_state.items()
+            if any(k.startswith(prefix) for prefix in training_keys)
+        }
+        model.load_state_dict(filtered, strict=False)
+        return model
+
+    @classmethod
+    # ruff: noqa: PLR0912
+    def load_finetune_mode(
+        cls,
+        slim_path: str,
+        large_path: str,
+        config: StyleTTS2Config,
+        mode: Literal[
+            "full", "decoder_only", "speaker_only", "diffusion_only", "no_discriminators"
+        ] = "full",
+    ) -> Self:
+        """
+        Convenience factory for fine-tuning.  Loads weights via
+        ``from_pretrained_split`` then freezes the appropriate sub-modules
+        according to ``mode``.
+
+        Modes
+        -----
+        full              - Everything trainable (default).
+        decoder_only      - Freeze bert, text_encoder, predictor, diffusion.
+        speaker_only      - Freeze everything except style_encoder and
+                            predictor_encoder.
+        diffusion_only    - Freeze generator; only train the diffusion
+                            style predictor.
+        no_discriminators - Full generator but discriminators are NOT trained
+                            (safe for small datasets).
+        """
+        model = cls.from_pretrained_split(slim_path, large_path, config)
+
+        if mode == "full":
+            pass  # All trainable
+
+        elif mode == "decoder_only":
+            for module in [
+                model.bert,
+                model.bert_encoder,
+                model.text_encoder,
+                model.predictor,
+                model.diffusion,
+            ]:
+                for p in module.parameters():
+                    p.requires_grad_(False)
+
+        elif mode == "speaker_only":
+            for name, module in model.named_children():
+                if name not in ("style_encoder", "predictor_encoder"):
+                    for p in module.parameters():
+                        p.requires_grad_(False)
+
+        elif mode == "diffusion_only":
+            for name, module in model.named_children():
+                if name != "diffusion":
+                    for p in module.parameters():
+                        p.requires_grad_(False)
+
+        elif mode == "no_discriminators":
+            for module in [model.mpd, model.msd, model.wd]:
+                for p in module.parameters():
+                    p.requires_grad_(False)
+
         return model
