@@ -9,7 +9,7 @@ import torchaudio
 from loguru import logger
 
 from styletts2.config import StyleTTS2Config
-from styletts2.data.text import Tokenizer
+from styletts2.data.text import Tokenizer, chunk_text
 from styletts2.models.styletts2 import StyleTTS2Model
 from styletts2.voices import VoiceManager
 
@@ -129,8 +129,6 @@ class StyleTTS2Inference(torch.nn.Module):
     def forward(
         self,
         text: str,
-        diffusion_steps: int = 5,
-        embedding_scale: float = 1.0,
         ref_s: Optional[torch.Tensor] = None,
         voice: Optional[str] = None,
         speed: float = 1.0,
@@ -154,7 +152,6 @@ class StyleTTS2Inference(torch.nn.Module):
         """
         # 1. Tokenize
         tokens = self.tokenizer.encode(text)
-        tokens = [0, *tokens, 0]
         tokens_tensor = torch.LongTensor([tokens]).to(self.device)
         input_lengths = torch.LongTensor([tokens_tensor.shape[-1]]).to(self.device)
 
@@ -174,9 +171,10 @@ class StyleTTS2Inference(torch.nn.Module):
             raise ValueError("ref_s or voice must be provided. Diffusion sampling is disabled.")
 
         ref_s = ref_s.to(self.device)
-        # Support Kokoro-style (N, style_dim*2) voice packs
+        # Support Kokoro/KittenTTS-style (N, style_dim*2) voice packs
         if ref_s.ndim == 2 and ref_s.shape[1] == self.config.model_params.style_dim * 2:
-            idx = min(len(tokens) - 1, ref_s.shape[0] - 1)
+            # Use text length for style selection as in KittenTTS
+            idx = min(len(text), ref_s.shape[0] - 1)
             s_pred = ref_s[idx : idx + 1]  # (1, style_dim*2)
         elif ref_s.ndim == 1:
             s_pred = ref_s.unsqueeze(0)
@@ -238,20 +236,15 @@ class StyleTTS2Inference(torch.nn.Module):
         Returns:
             Concatenated audio waveform as a 1-D ``torch.Tensor``.
         """
-        # Remove sentence-splitting punctuation, keeping terminators
-        sentences = [
-            s.strip()
-            for raw in passage.replace("!", ".").replace("?", ".").split(".")
-            for s in [raw.strip()]
-            if s
-        ]
+        # Split into chunks using the upgraded logic from KittenTTS
+        sentences = chunk_text(passage)
 
         wavs: list[torch.Tensor] = []
         last_s: Optional[torch.Tensor] = None
 
         for sentence in sentences:
             # Feed the blended style from the previous sentence as ref_s
-            output = self.forward(sentence + ".", ref_s=last_s, **kwargs)
+            output = self.forward(sentence, ref_s=last_s, **kwargs)
 
             # Smooth style for the *next* sentence
             if last_s is not None:
@@ -279,16 +272,11 @@ class StyleTTS2Inference(torch.nn.Module):
             alpha: Style blending factor between consecutive sentences.
             **kwargs: Forwarded to :meth:`forward`.
         """
-        sentences = [
-            s.strip()
-            for raw in passage.replace("!", ".").replace("?", ".").split(".")
-            for s in [raw.strip()]
-            if s
-        ]
+        sentences = chunk_text(passage)
 
         last_s: Optional[torch.Tensor] = None
         for sentence in sentences:
-            output = self.forward(sentence + ".", ref_s=last_s, **kwargs)
+            output = self.forward(sentence, ref_s=last_s, **kwargs)
             if last_s is not None:
                 last_s = alpha * last_s + (1 - alpha) * output.style
             else:
