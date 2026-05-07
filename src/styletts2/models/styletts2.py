@@ -1,4 +1,4 @@
-from typing import Literal, Self
+from typing import Literal, Optional, Self
 
 from safetensors.torch import load_file as safetensors_load_file
 from torch import nn
@@ -164,7 +164,7 @@ class StyleTTS2Model(nn.Module):
     @classmethod
     def from_pretrained(
         cls,
-        path: str,
+        path: Optional[str],
         config: StyleTTS2Config,
         mode: Literal["inference", "train"] = "inference",
     ) -> Self:
@@ -180,10 +180,11 @@ class StyleTTS2Model(nn.Module):
                   ``"train"`` keeps all modules.
         """
         model = cls(config)
-        state = safetensors_load_file(path, device="cpu")
-        model.load_state_dict(state, strict=False)
         if mode == "inference":
             model._drop_training_components()
+        if path:
+            state = safetensors_load_file(path, device="cpu")
+            model.load_state_dict(state)
         return model
 
     @classmethod

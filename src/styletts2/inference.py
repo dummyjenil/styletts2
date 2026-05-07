@@ -7,21 +7,9 @@ from typing import Optional
 import torch
 import torchaudio
 from loguru import logger
-from safetensors.torch import load_file as safetensors_load_file
 
 from styletts2.config import StyleTTS2Config
 from styletts2.data.text import Tokenizer
-from styletts2.models.diffusion.k_diffusion import (
-    ADPM2Sampler,
-    DiffusionSampler,
-    KDiffusion,
-)
-from styletts2.models.diffusion.model import StyleTransformer1d, Transformer1d
-from styletts2.models.diffusion.sampler import (
-    AudioDiffusionConditional,
-    KarrasSchedule,
-    LogNormalDistribution,
-)
 from styletts2.models.styletts2 import StyleTTS2Model
 from styletts2.voices import VoiceManager
 
@@ -42,7 +30,7 @@ class StyleTTS2Inference(torch.nn.Module):
 
     def __init__(
         self,
-        checkpoint_path: str,
+        checkpoint_path: Optional[str] = None,
         config_path: Optional[str] = None,
         device: Optional[str] = None,
         voices_dir: Optional[str] = None,
@@ -69,82 +57,6 @@ class StyleTTS2Inference(torch.nn.Module):
         # 3. Tokenizer & Voice Manager
         self.tokenizer = Tokenizer()
         self.voice_manager = VoiceManager(voices_dir, device=str(self.device))
-
-        # 4. Diffusion Sampler
-        #    NOTE: diffusion module was removed in inference mode — we rebuild a
-        #    lightweight sampler from the already-loaded diffusion weights that
-        #    are embedded in the full model before _drop_training_components().
-        #    Since mode="inference" deletes self.model.diffusion AFTER loading,
-        #    we need to capture the sampler reference before deletion.
-        #
-        #    → Workaround: build a temporary full model, grab the sampler, then
-        #      discard the heavy modules.  The sampler only holds a reference to
-        #      `diffusion.diffusion` (the KDiffusion net) which is lightweight.
-        self._sampler: Optional[DiffusionSampler] = None
-        self._init_sampler(checkpoint_path)
-
-    def _init_sampler(self, checkpoint_path: str) -> None:
-        """Build a DiffusionSampler without keeping all training components."""
-        params = self.config.model_params
-        diff_params = params.diffusion
-
-        # Rebuild only the diffusion sub-graph
-        if params.multispeaker:
-            transformer = StyleTransformer1d(
-                channels=params.style_dim * 2,
-                context_embedding_features=self.config.external_models.plbert.hidden_size,
-                context_features=params.style_dim * 2,
-                num_layers=diff_params.transformer.num_layers,
-                num_heads=diff_params.transformer.num_heads,
-                head_features=diff_params.transformer.head_features,
-                multiplier=diff_params.transformer.multiplier,
-            )
-        else:
-            transformer = Transformer1d(
-                channels=params.style_dim * 2,
-                context_embedding_features=self.config.external_models.plbert.hidden_size,
-                num_layers=diff_params.transformer.num_layers,
-                num_heads=diff_params.transformer.num_heads,
-                head_features=diff_params.transformer.head_features,
-                multiplier=diff_params.transformer.multiplier,
-            )
-
-        diffusion = AudioDiffusionConditional(
-            in_channels=1,
-            embedding_max_length=self.config.external_models.plbert.max_position_embeddings,
-            embedding_features=self.config.external_models.plbert.hidden_size,
-            embedding_mask_proba=diff_params.embedding_mask_proba,
-            channels=params.style_dim * 2,
-            context_features=params.style_dim * 2,
-        )
-        diffusion.diffusion = KDiffusion(
-            net=transformer,
-            sigma_distribution=LogNormalDistribution(
-                mean=diff_params.dist.mean, std=diff_params.dist.std
-            ),
-            sigma_data=diff_params.dist.sigma_data,
-            dynamic_threshold=0.0,
-        )
-        diffusion.unet = transformer
-
-        # Load only diffusion weights
-        state = safetensors_load_file(checkpoint_path, device="cpu")
-        diff_state = {
-            k[len("diffusion."):]: v
-            for k, v in state.items()
-            if k.startswith("diffusion.")
-        }
-        if diff_state:
-            diffusion.load_state_dict(diff_state, strict=False)
-
-        diffusion = diffusion.to(self.device).eval()
-
-        self._sampler = DiffusionSampler(
-            diffusion.diffusion,
-            sampler=ADPM2Sampler(),
-            sigma_schedule=KarrasSchedule(sigma_min=0.0001, sigma_max=3.0, rho=9.0),
-            clamp=False,
-        )
 
     # ------------------------------------------------------------------
     # Data class for outputs
@@ -254,33 +166,22 @@ class StyleTTS2Inference(torch.nn.Module):
         d_en = self.model.bert_encoder(bert_dur).transpose(-1, -2)
         t_en = self.model.text_encoder(tokens_tensor, input_lengths, None)
 
-        # 3. Style Selection / Generation
+        # 3. Style Selection
         if ref_s is None and voice is not None:
             ref_s = self.voice_manager.get_voice(voice)
 
-        if ref_s is not None:
-            ref_s = ref_s.to(self.device)
-            # Support Kokoro-style (N, style_dim*2) voice packs
-            if ref_s.ndim == 2 and ref_s.shape[1] == self.config.model_params.style_dim * 2:
-                idx = min(len(tokens) - 1, ref_s.shape[0] - 1)
-                s_pred = ref_s[idx : idx + 1]  # (1, style_dim*2)
-            elif ref_s.ndim == 1:
-                s_pred = ref_s.unsqueeze(0)
-            else:
-                s_pred = ref_s
+        if ref_s is None:
+            raise ValueError("ref_s or voice must be provided. Diffusion sampling is disabled.")
+
+        ref_s = ref_s.to(self.device)
+        # Support Kokoro-style (N, style_dim*2) voice packs
+        if ref_s.ndim == 2 and ref_s.shape[1] == self.config.model_params.style_dim * 2:
+            idx = min(len(tokens) - 1, ref_s.shape[0] - 1)
+            s_pred = ref_s[idx : idx + 1]  # (1, style_dim*2)
+        elif ref_s.ndim == 1:
+            s_pred = ref_s.unsqueeze(0)
         else:
-            # Generate style via diffusion when no reference is provided
-            if self._sampler is None:
-                raise RuntimeError("Diffusion sampler not initialised.")
-            noise = torch.randn(
-                1, 1, self.config.model_params.style_dim * 2, device=self.device
-            )
-            s_pred = self._sampler(
-                noise,
-                num_steps=diffusion_steps,
-                embedding=bert_dur,
-                embedding_scale=embedding_scale,
-            ).squeeze(1)
+            s_pred = ref_s
 
         style_dim = self.config.model_params.style_dim
         s = s_pred[:, style_dim:]    # predictor style
@@ -405,7 +306,6 @@ def main():
     parser.add_argument("--output", type=str, default="output.wav", help="Output wav path")
     parser.add_argument("--long", action="store_true", help="Use sentence-splitting for long text")
     parser.add_argument("--speed", type=float, default=1.0, help="Speaking speed multiplier")
-    parser.add_argument("--steps", type=int, default=5, help="Diffusion steps (when no voice/ref_s given)")
     args = parser.parse_args()
 
     engine = StyleTTS2Inference(
@@ -421,7 +321,6 @@ def main():
             args.text,
             voice=args.voice,
             speed=args.speed,
-            diffusion_steps=args.steps,
         )
         wav = output.audio
 
