@@ -3,6 +3,7 @@ from torch import nn
 from torch.nn.utils.parametrizations import weight_norm
 
 from styletts2.models.components import LayerNorm
+from styletts2.utils.helpers import length_to_mask
 
 
 class TextEncoder(nn.Module):
@@ -32,6 +33,10 @@ class TextEncoder(nn.Module):
     def forward(self, x, input_lengths, m):
         x = self.embedding(x)
         x = x.transpose(1, 2)
+
+        if m is None:
+            m = length_to_mask(input_lengths, max_len=x.shape[-1])
+
         m = m.to(input_lengths.device).unsqueeze(1)
         x.masked_fill_(m, 0.0)
 

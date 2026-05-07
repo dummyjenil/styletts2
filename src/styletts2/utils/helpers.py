@@ -31,9 +31,11 @@ def maximum_path(neg_cent, mask):
     return torch.from_numpy(path).to(device=device, dtype=dtype)
 
 
-def length_to_mask(lengths):
+def length_to_mask(lengths, max_len=None):
+    if max_len is None:
+        max_len = lengths.max()
     mask = (
-        torch.arange(lengths.max())
+        torch.arange(max_len, device=lengths.device)
         .unsqueeze(0)
         .expand(lengths.shape[0], -1)
         .type_as(lengths)

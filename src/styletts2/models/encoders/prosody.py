@@ -6,6 +6,7 @@ from torch import nn
 from torch.nn.utils.parametrizations import weight_norm
 
 from styletts2.models.components import AdaIN1d, AdaLayerNorm, LinearNorm
+from styletts2.utils.helpers import length_to_mask
 
 
 class DurationEncoder(nn.Module):
@@ -28,6 +29,8 @@ class DurationEncoder(nn.Module):
         self.sty_dim = sty_dim
 
     def forward(self, x, style, text_lengths, m):
+        if m is None:
+            m = length_to_mask(text_lengths, max_len=x.shape[-1])
         masks = m.to(text_lengths.device)
         x = x.permute(2, 0, 1)
         s = style.expand(x.shape[0], x.shape[1], -1)
@@ -158,6 +161,8 @@ class ProsodyPredictor(nn.Module):
         self.N_proj = nn.Conv1d(d_hid // 2, 1, 1, 1, 0)
 
     def forward(self, texts, style, text_lengths, alignment, m):
+        if m is None:
+            m = length_to_mask(text_lengths, max_len=texts.shape[-1])
         d = self.text_encoder(texts, style, text_lengths, m)
         input_lengths = text_lengths.cpu().numpy()
         x = nn.utils.rnn.pack_padded_sequence(
